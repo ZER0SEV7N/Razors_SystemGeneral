@@ -6,12 +6,13 @@ use App\Models\User; //Modelo de usuario
 use Illuminate\Http\Request; //Manejo de solicitudes HTTP
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth; //Facades para JWT
 use Illuminate\Support\Facades\Hash; //Facades para manejo de contraseñas
-
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTFactory;
 class Authcontroller extends Controller
 {
     //Función para manejar el registro de nuevos usuarios
     public function register(Request $request)
     {
+        $request->headers->set('Accept', 'application/json');
         //Validar los datos de entrada
         $validatedData = $request->validate([
             'name' => 'required|string|max:255', //nombre del usuario
@@ -20,7 +21,7 @@ class Authcontroller extends Controller
             'password' => 'required|string|min:6|confirmed', //contraseña con confirmación
             'phone' => 'nullable|string|max:20', //teléfono del usuario (opcional)
         ]);
-
+        //Crear un nuevo usuario en la base de datos
         $user = User::create([
             'name' => $validatedData['name'],
             'last_name' => $validatedData['last_name'],
@@ -28,18 +29,57 @@ class Authcontroller extends Controller
             'password' => Hash::make($validatedData['password']),
             'phone' => $validatedData['phone'] ?? null,
         ]);
-
-        $token = JWTAuth::fromUser($user);
-
-        return response()->json(['token' => $token], 201);
+        #Generar el tokem
+        $token = $user->createToken('auth_token')->plainTextToken;
+        
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ], 201);
     }
     //Función para manejar el inicio de sesión de usuarios
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
-        if (!$token = JWTAuth::attempt($credentials)) {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]); //Obtener credenciales de la solicitud
+        $user = User::where('email', $credentials['email'])->first(); //Buscar usuario por correo electrónico
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
-        }
-        return response()->json(['token' => $token]);
+        } //Verificar si el usuario existe y la contraseña es correcta
+
+        //Generar token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        //Retornar el token JWT generado
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ]);
+    }
+
+    //Funcion para obtener el perfil del usuario autenticado
+    public function profile(Request $request)
+    {
+        return response()->json($request()->user()); //Retornar los datos del usuario autenticado
+    }
+
+    //Funcion para cerrar sesión del usuario
+    public function logout(Request $request)
+    {
+        //Invalidar el token actual
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logged out']);
+    }
+
+    //Funcion para refrescar el token JWT
+    public function refresh()
+    {
+        $newToken = JWTAuth::refresh(JWTAuth::getToken()); //Refrescar el token JWT
+        return response()->json([
+            'token' => $newToken
+        ]);
     }
 }
