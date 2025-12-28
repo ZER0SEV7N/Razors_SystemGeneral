@@ -1,0 +1,153 @@
+//AdminVentasFrontend/src/pages/products/ProductForm.tsx
+/*--------------------------------------------------------------------
+    Componente de formulario para crear o editar productos
+    - Principales funcionalidades:
+        - Campos para nombre, precio, categoría y stock
+        - Validación de campos
+        - Integración con API para crear o actualizar productos
+--------------------------------------------------------------------*/
+import { useState, useEffect } from "react"; //Importar useState y useEffect para manejar el estado y ciclo de vida del componente
+import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
+import CategoriesModal from "../../components/ui/CategoriesModal";
+import "../css/products.css"; //Importar estilos CSS para la pagina de productos
+
+//Definir la interfaz para una categoría - Esto es primero ya que necesitamos usarla en Product
+interface Category {
+    id: number;
+    name: string;
+}
+
+//Definir la interfaz 
+interface Props {
+    product?: any; //Producto a editar (opcional)
+    onSuccess: () => void; //Función a llamar después de una creación o edición exitosa
+}
+
+//Funcion componente para el formulario de productos
+const ProductForm = ({ product,onSuccess}: Props) =>{
+    const [categories, setCategories] = useState<Category[]>([]); //Estado para almacenar la lista de categorías
+    const [showCategoryModal, setShowCategoryModal] = useState(false); //Estado para mostrar/ocultar el modal de categorías
+    //Estado para los campos del formulario
+    const [form, setForm] = useState({
+        name: "",
+        description: "",
+        category_id: "",
+        price: "",
+        stock: "",
+        min_stock: "",
+        is_active: true,
+    });
+
+    //===========FUNCIONES=========================
+
+    //Cargar las categorías al montar el componente
+    const fetchCategories = async () => {
+        const res = await api.get("/categories");
+        setCategories(res.data.filter((c: any) => c.is_active)); //Filtrar solo categorías activas
+    };
+
+    //Usar useEffect para cargar las categorías al montar el componente
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    //Cargar los datos del producto en el formulario si se proporciona un producto
+    useEffect(() => {
+        if (product) {
+            setForm({
+                name: product.name || "",
+                description: product.description || "",
+                category_id: product.category_id?.toString() || "",
+                price: product.price?.toString() || "",
+                stock: product.stock?.toString() || "",
+                min_stock: product.min_stock?.toString() || "",
+                is_active: product.is_active ?? true,
+            });
+        }
+    }, [product]);
+
+    //Manejar el cambio en los campos del formulario
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const { name, type } = e.target;
+      const value = type === "checkbox"
+          ? (e.target as HTMLInputElement).checked
+          : e.target.value;
+
+      setForm({ ...form, [name]: value });
+    };
+
+    //Manejar el envío del formulario
+    const submitForm = async () => {
+        if (!form.name || !form.category_id || !form.price) {
+          alert("Nombre, categoría y precio son obligatorios");
+          return;
+        }
+        const payload = {
+            ...form,
+            category_id: Number(form.category_id),
+            price: Number(form.price),
+            stock: Number(form.stock),
+            min_stock: Number(form.min_stock), 
+        };
+        //Si se proporciona un producto, actualizarlo; de lo contrario, crear uno nuevo
+        try {
+          if (product?.id) {
+              await api.put(`/products/${product.id}`, payload); //Actualizar producto existente
+          } else {
+              await api.post("/products", payload); //Crear nuevo producto
+          }
+          onSuccess(); //Llamar a la función onSuccess después de una operación exitosa
+      } catch (error) {
+          alert("Error al guardar el producto");
+          console.error(error);
+      }
+    };
+
+  return (
+    <div className="product-form">
+      <input name="name" value={form.name} onChange={handleChange} placeholder="Nombre" />
+      <textarea name="description" placeholder="Descripcion" value={form.description} onChange={handleChange} />
+
+      <div style={{ display: "flex", gap: "8px" }}>
+        <select name="category_id" value={form.category_id} onChange={handleChange}>
+          <option value="">Seleccione una categoría</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+
+        <button type="button" onClick={() => setShowCategoryModal(true)}>
+          + Categoría
+        </button>
+      </div>
+
+      <input name="price" type="number" placeholder="Precio" value={form.price} onChange={handleChange} />
+      <input name="stock" type="number" placeholder="Stock" value={form.stock} onChange={handleChange} />
+      <input name="min_stock" type="number" placeholder="Stock mínimo" value={form.min_stock} onChange={handleChange} />
+
+      <label>
+        <input
+          className=""
+          type="checkbox"
+          checked={form.is_active}
+          onChange={handleChange}
+          name="is_active"
+        />
+        Activo
+      </label>
+
+      <button onClick={submitForm}>
+        {product ? "Actualizar" : "Crear"} Producto
+      </button>
+
+      {showCategoryModal && (
+        <CategoriesModal
+          onClose={() => setShowCategoryModal(false)}
+          onCreated={fetchCategories}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ProductForm; //Exportar el componente ProductForm

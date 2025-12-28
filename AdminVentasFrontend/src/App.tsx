@@ -4,17 +4,30 @@
     - Configuracion de rutas
     - Estructura base de la aplicacion
 --------------------------------------------------------------------*/
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"; //Importar componentes de react-router-dom para la navegacion
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"; //Importar componentes de react-router-dom para la navegacion
 import Login from "./pages/Login"; //Importar la pagina de Login
+import Dashboard from "./pages/Dashboard"; //Importar la pagina de Dashboard
+import ProtectedRoute from "./lib/ProtectedRoute";
+import MainLayout from "./components/layout/MainLayout";
+import ProductsPage from "./pages/products/ProductsPage";
 
 function App() {
     return (
-        <Router>
+        <BrowserRouter>
             <Routes>
-                <Route path="/login" element={<Login />} /> {/* Ruta para la pagina de Login */}
-                {/* Otras rutas pueden ser agregadas aqui */}
+                {/* Rutas Publicas */}
+                <Route path="/login" element={<Login />} />
+                {/* Rutas protegidas */}
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<MainLayout />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/products" element={<ProductsPage />} />
+                    </Route>
+                </Route>
+                {/* Ruta por defecto */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-        </Router>
+        </BrowserRouter>
     );
 }
 export default App;

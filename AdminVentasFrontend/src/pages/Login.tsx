@@ -9,7 +9,7 @@
 import { useState } from "react"; //Importar useState para manejar el estado del componente
 import { useNavigate } from "react-router-dom"; //Importar useNavigate para la navegacion entre paginas
 import api from "../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
-import "../pages/login.css"; //Importar estilos CSS para la pagina de login
+import "../pages/css/login.css"; //Importar estilos CSS para la pagina de login
 
 //Componente de Login
 const Login = () => {
@@ -31,14 +31,15 @@ const Login = () => {
                 email, password
             });
             //Guardar el token de autenticacion en el almacenamiento local
-            const token = res.data.token;
-            //Verificar que se recibio el token
-            if(!token){
+            const { token, user } = res.data;
+            //Verificar que se recibio el token y la informacion del usuario
+            if(!token || !user){
                 throw new Error("Token de autenticacion no recibido");
             }
             localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
             //Redirigir al usuario a la pagina principal despues del login exitoso
-            navigate("/");
+            navigate("/dashboard");
         }catch (err) {  
             setError("Error de autenticacion. Verifique sus credenciales."); //Establecer el mensaje de error
         } finally {
@@ -48,7 +49,8 @@ const Login = () => {
     //Renderizar el formulario de login
     return (
         <div className="login-container">
-            <h2>Iniciar Sesión</h2>
+            <h1>Bienvenido a Razors System Administration.</h1>
+            <h2>Iniciar Sesión.</h2>
             <form onSubmit={handleLogin}>
                 <div>
                     <label htmlFor="email">Correo Electrónico:</label>

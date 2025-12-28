@@ -13,7 +13,7 @@ return new class extends Migration
     {
         #Esquema de la tabla products
         Schema::create('products', function (Blueprint $table) {
-            $table->id('product_id'); #Primary key
+            $table->id(); #Primary key
             $table->string('name'); #Nombre del producto
             $table->text('description')->nullable(); #Descripción del producto (permite nulos)
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade'); #Clave foránea a la tabla categories

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('password'); #contraseña del usuario
             $table->string('phone')->nullable(); #teléfono del usuario (permite nulos)
             $table->string('role')->default('user'); #rol del usuario con valor por defecto 'user'
-            $table->rememberToken(); #token para recordar sesión
             $table->timestamps();
         });
     }

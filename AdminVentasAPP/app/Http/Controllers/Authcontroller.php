@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 //Controlador para la autenticación de usuarios en la aplicación AdminVentasAPP
 use App\Models\User; //Modelo de usuario
 use Illuminate\Http\Request; //Manejo de solicitudes HTTP
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth; //Facades para JWT
 use Illuminate\Support\Facades\Hash; //Facades para manejo de contraseñas
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTFactory;
 class Authcontroller extends Controller
 {
     //Función para manejar el registro de nuevos usuarios
@@ -18,7 +16,7 @@ class Authcontroller extends Controller
             'name' => 'required|string|max:255', //nombre del usuario
             'last_name' => 'required|string|max:255', //apellido del usuario
             'email' => 'required|string|email|max:255|unique:users', //correo electrónico único
-            'password' => 'required|string|min:6|confirmed', //contraseña con confirmación
+            'password' => 'required|string|min:6', //contraseña con confirmación
             'phone' => 'nullable|string|max:20', //teléfono del usuario (opcional)
         ]);
         //Crear un nuevo usuario en la base de datos
@@ -63,7 +61,7 @@ class Authcontroller extends Controller
     //Funcion para obtener el perfil del usuario autenticado
     public function profile(Request $request)
     {
-        return response()->json($request()->user()); //Retornar los datos del usuario autenticado
+        return response()->json($request->user()); //Retornar los datos del usuario autenticado
     }
 
     //Funcion para cerrar sesión del usuario
@@ -72,14 +70,5 @@ class Authcontroller extends Controller
         //Invalidar el token actual
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out']);
-    }
-
-    //Funcion para refrescar el token JWT
-    public function refresh()
-    {
-        $newToken = JWTAuth::refresh(JWTAuth::getToken()); //Refrescar el token JWT
-        return response()->json([
-            'token' => $newToken
-        ]);
     }
 }
