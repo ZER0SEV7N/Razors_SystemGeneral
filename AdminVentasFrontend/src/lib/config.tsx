@@ -10,17 +10,17 @@ export const getBaseURL = () => {
     }else if (typeof window !== "undefined") {
       const ip = localStorage.getItem("server_ip");
         if (ip) {
-            baseUrl = `http://${ip}:8000`;
+            baseUrl = `http://${ip}:8000/api`;
             source = `IP desde localStorage: ${ip}`;
         } else {
             //Fallback para entornos donde window no existe (SSR o build)
-            baseUrl = `http://${window.location.hostname}:8000`;
+            baseUrl = `http://${window.location.hostname}:8000/api`;
             source = `IP local detectada desde PC: ${window.location.hostname}`;
         }
     }
     //Mostrar log solo en modo desarrollo
     else {
-        baseUrl = "http://localhost:8000";
+        baseUrl = "http://localhost:8000/api";
         source = "Fallback por defecto (localhost)";
     }
     if(import.meta.env.DEV) {

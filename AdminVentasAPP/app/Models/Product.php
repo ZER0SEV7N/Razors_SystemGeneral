@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory; //Habilita el uso de fáb
 class Product extends Model
 {
     use HasFactory; //Incorpora la funcionalidad de fábricas
-    protected $primaryKey = 'id'; //Clave primaria de la tabla
+    protected $primaryKey = 'product_id'; //Clave primaria de la tabla
 
     protected $fillable = [
         'name',
         'description',
         'category_id',
+        'image',
         'price',
         'stock',
         'min_stock',
@@ -31,12 +32,12 @@ class Product extends Model
     //Relación con la categoría del producto
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id', 'category_id');
     }
 
     //Relación con el usuario que creó o administra el producto
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

@@ -10,12 +10,7 @@ import { useState, useEffect } from "react"; //Importar useState y useEffect par
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
 import CategoriesModal from "../../components/ui/CategoriesModal";
 import "../css/products.css"; //Importar estilos CSS para la pagina de productos
-
-//Definir la interfaz para una categoría - Esto es primero ya que necesitamos usarla en Product
-interface Category {
-    id: number;
-    name: string;
-}
+import type { Category } from "../../types";
 
 //Definir la interfaz 
 interface Props {
@@ -27,6 +22,10 @@ interface Props {
 const ProductForm = ({ product,onSuccess}: Props) =>{
     const [categories, setCategories] = useState<Category[]>([]); //Estado para almacenar la lista de categorías
     const [showCategoryModal, setShowCategoryModal] = useState(false); //Estado para mostrar/ocultar el modal de categorías
+    const [loading, setLoading] = useState(false); // Estado para evitar doble click
+    //Estado para manejar la carga de la imagen
+    const [image, setImage] = useState<File | null>(null);
+    
     //Estado para los campos del formulario
     const [form, setForm] = useState({
         name: "",
@@ -35,7 +34,6 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
         price: "",
         stock: "",
         min_stock: "",
-        is_active: true,
     });
 
     //===========FUNCIONES=========================
@@ -54,15 +52,14 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
     //Cargar los datos del producto en el formulario si se proporciona un producto
     useEffect(() => {
         if (product) {
-            setForm({
-                name: product.name || "",
-                description: product.description || "",
-                category_id: product.category_id?.toString() || "",
-                price: product.price?.toString() || "",
-                stock: product.stock?.toString() || "",
-                min_stock: product.min_stock?.toString() || "",
-                is_active: product.is_active ?? true,
-            });
+          setForm({
+            name: product.name || "",
+            description: product.description || "",
+            category_id: product.category_id?.toString() || "",
+            price: product.price?.toString() || "",
+            stock: product.stock?.toString() || "",
+            min_stock: product.min_stock?.toString() || "",
+          });
         }
     }, [product]);
 
@@ -72,7 +69,6 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
       const value = type === "checkbox"
           ? (e.target as HTMLInputElement).checked
           : e.target.value;
-
       setForm({ ...form, [name]: value });
     };
 
@@ -82,62 +78,78 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
           alert("Nombre, categoría y precio son obligatorios");
           return;
         }
-        const payload = {
-            ...form,
-            category_id: Number(form.category_id),
-            price: Number(form.price),
-            stock: Number(form.stock),
-            min_stock: Number(form.min_stock), 
-        };
+        setLoading(true);
+        const formData = new FormData();
+        formData.append("name", form.name);
+        formData.append("description", form.description);
+        formData.append("category_id", form.category_id);
+        formData.append("price", form.price);
+        formData.append("stock", form.stock);
+        formData.append("min_stock", form.min_stock);
+        //Agregar la imagen si se seleccionó una
+        if(image){
+          formData.append("image", image);
+        }
+
         //Si se proporciona un producto, actualizarlo; de lo contrario, crear uno nuevo
         try {
-          if (product?.id) {
-              await api.put(`/products/${product.id}`, payload); //Actualizar producto existente
+          if (product?.product_id) {
+            formData.append("_method", "PUT"); //Para compatibilidad con Laravel
+            await api.post(`/products/${product.product_id}`, formData); //Actualizar producto existente
           } else {
-              await api.post("/products", payload); //Crear nuevo producto
+            await api.post("/products", formData); //Crear nuevo producto
           }
           onSuccess(); //Llamar a la función onSuccess después de una operación exitosa
       } catch (error) {
           alert("Error al guardar el producto");
           console.error(error);
+      }finally {
+        setLoading(false);
       }
     };
 
   return (
     <div className="product-form">
+      <h3>{product ? "Editar Producto" : "Nuevo Producto"}</h3>
+      
       <input name="name" value={form.name} onChange={handleChange} placeholder="Nombre" />
-      <textarea name="description" placeholder="Descripcion" value={form.description} onChange={handleChange} />
+      
+      <textarea name="description" placeholder="Descripción" value={form.description} onChange={handleChange} />
 
+      {/* Input de Categoría */}
       <div style={{ display: "flex", gap: "8px" }}>
         <select name="category_id" value={form.category_id} onChange={handleChange}>
           <option value="">Seleccione una categoría</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          {categories.map((cat) => (
+            <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
           ))}
         </select>
-
-        <button type="button" onClick={() => setShowCategoryModal(true)}>
-          + Categoría
-        </button>
+        <button type="button" onClick={() => setShowCategoryModal(true)}>+ Cat</button>
       </div>
 
-      <input name="price" type="number" placeholder="Precio" value={form.price} onChange={handleChange} />
-      <input name="stock" type="number" placeholder="Stock" value={form.stock} onChange={handleChange} />
+      <div className="form-row" style={{display: 'flex', gap: '10px'}}>
+        <input name="price" type="number" placeholder="Precio S/." value={form.price} onChange={handleChange} style={{flex: 1}}/>
+        <input name="stock" type="number" placeholder="Stock" value={form.stock} onChange={handleChange} style={{flex: 1}}/>
+      </div>
+      
       <input name="min_stock" type="number" placeholder="Stock mínimo" value={form.min_stock} onChange={handleChange} />
 
-      <label>
-        <input
-          className=""
-          type="checkbox"
-          checked={form.is_active}
-          onChange={handleChange}
-          name="is_active"
+      {/*Campo para imagenes*/}
+      <div className="file-input-container" style={{ margin: '10px 0' }}>
+        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Imagen del Producto:</label>
+        <input 
+          type="file" 
+          accept="image/*"
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              setImage(e.target.files[0]);
+            }
+          }} 
         />
-        Activo
-      </label>
+      </div>
 
-      <button onClick={submitForm}>
-        {product ? "Actualizar" : "Crear"} Producto
+      <button onClick={submitForm} disabled={loading} className="btn-primary">
+        {loading ? "Guardando..." : (product ? "Actualizar" : "Crear") + " Producto"}
       </button>
 
       {showCategoryModal && (

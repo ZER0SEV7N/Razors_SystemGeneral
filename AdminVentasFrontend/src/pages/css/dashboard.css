@@ -1,0 +1,113 @@
+/* src/pages/css/dashboard.css */
+
+.dashboard-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: #333;
+}
+
+.dashboard-subtitle {
+    color: #666;
+    margin-top: 5px;
+    font-size: 1rem;
+}
+
+/* Grid de Tarjetas (KPIs) */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+/* Estilos base de la Tarjeta */
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 4px solid #ccc; /* Color por defecto */
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.stat-title {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+/* Modificadores de color para las tarjetas */
+.card-blue { border-left-color: #3b82f6; }
+.card-red { border-left-color: #ef4444; }
+.card-green { border-left-color: #10b981; }
+.card-violet { border-left-color: #8b5cf6; }
+.card-orange { border-left-color: #f59e0b; }
+
+.alert-text {
+    font-size: 12px;
+    margin-left: 10px;
+    color: #ef4444;
+    font-weight: normal;
+    background: #fee2e2;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Acciones Rápidas */
+.quick-actions-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.quick-actions-grid {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.btn-action {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.btn-action:hover {
+    opacity: 0.9;
+}
+
+.btn-blue { background-color: #3b82f6; }
+.btn-green { background-color: #10b981; }

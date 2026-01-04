@@ -5,6 +5,9 @@ import { API_URL } from "./config"; //Importar la URL base de la API desde el ar
 //Crear una instancia de axios con la configuración predeterminada
 const api = axios.create({
     baseURL: API_URL, //Establecer la URL base de la API
+    headers: {
+        'Accept': 'application/json',
+    }
 });
 //Agregar un interceptor para incluir el token de autenticación en cada solicitud
 api.interceptors.request.use((config) => {
@@ -15,8 +18,9 @@ api.interceptors.request.use((config) => {
     return config; //Devolver la configuración modificada
 });
 //Agregar un interceptor para manejar respuestas con error de autenticación
-api.interceptors.response.use( response => response,
-    error => {
+api.interceptors.response.use( 
+    (response) => response,
+    (error) => {
         if (error.response?.status === 401) {
         localStorage.removeItem("token");
             window.location.href = "/login";

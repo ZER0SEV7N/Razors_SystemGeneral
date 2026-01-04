@@ -13,7 +13,7 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens;
     use HasFactory, Notifiable;
-
+    protected $primaryKey = 'user_id'; //Clave primaria de la tabla users
     /**
      * The attributes that are mass assignable.
      *
@@ -50,4 +50,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    //Relacion con los productos que administra o creó el usuario
+    public function products()
+    {
+        return $this->hasMany(Product::class, 'user_id', 'user_id');
+    }
+
 }

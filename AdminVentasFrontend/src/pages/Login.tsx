@@ -36,6 +36,8 @@ const Login = () => {
             if(!token || !user){
                 throw new Error("Token de autenticacion no recibido");
             }
+            console.log("LOGIN COMPONENT RENDER");
+
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
             //Redirigir al usuario a la pagina principal despues del login exitoso

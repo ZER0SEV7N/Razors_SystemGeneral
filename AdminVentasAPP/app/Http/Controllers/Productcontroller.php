@@ -1,5 +1,5 @@
 <?php
-//AdminVentasAPP/app/Http/Controllers/productController.php
+//AdminVentasAPP/app/Http/Controllers/ProductController.php
 //Controlador para gestionar las operaciones relacionadas con los productos
 // ---------------------------------------------------------------
 //Funciones implementadas:
@@ -12,27 +12,54 @@ use App\Models\Product; //Importa el modelo Product
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 
-class Productcontroller extends Controller
+class ProductController extends Controller
 {
-    //Funcion para mostrar todos los productos en formato JSON mientras esten activos
-    public function index()
+    //Funcion para mostrar todos los productos en formato JSON
+    //Con un filtrado dependiendo de los parámetros de consulta
+    public function index(Request $request)
     {
+        $query = Product::query();
+
+        //1. Filtrar por estado (activo/inactivo)
+        if ($request->boolean('show_inactive')){
+            $query->where('is_active', false);
+        } else {
+            $query->where('is_active', true);
+        }
+
+        //2. Filtrar por nombre (Buscador general)
+        $query->when($request->input('search'), function ($q, $search){
+            return $q->where('name', 'like', "%{$search}%");
+        });
+
+        //3. Filtro por Categoria
+        $query->when($request->input('category_id'), function ($q, $categoryId){
+            return $q->where('category_id', $categoryId);
+        });
+
+        //4. Filtro por Stock Bajo (Alerta de stock)
+        $query->when($request->boolean('low_stock'), function ($q){
+            return $q->whereColumn('stock', '<=', 'min_stock');
+        });
+
+        //5. Filtro por Rango de Precio
+        $query->when($request->input('price_min'), function ($q, $priceMin){
+            return $q->where('price', '>=', $priceMin);
+        });
+
+        $query->when($request->input('price_max'), function ($q, $priceMax){
+            return $q->where('price', '<=', $priceMax);
+        });
+
+        //Ordenamiento y Paginacion
         return response()->json(
-            Product::where('is_active', true)
-                ->with(['category', 'user'])
-                ->get()
+            $query->with(['category', 'user'])
+                ->latest()
+                ->paginate(10)
         );
     }
 
-    //Funcion para mostrar todos los productos, incluyendo inactivos
-    public function inactive()
-    {
-        return response()->json(
-            Product::where('is_active', false)
-                ->with(['category', 'user'])
-                ->get()
-        );
-    }
+
 
     //Funcion para crear un nuevo producto 
     public function store(Request $request)
@@ -40,7 +67,7 @@ class Productcontroller extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:categories,category_id',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
@@ -49,9 +76,12 @@ class Productcontroller extends Controller
         ]);
         //Manejo de la carga de la imagen si se proporciona
         if ($request->hasFile('image')) {
+            $request->validate([
+                'image' => 'image|mimes:jpg,jpeg,png|max:2048'
+            ]);
+
             $data['image'] = $request->file('image')->store('products', 'public');
         }
-
         $data['user_id'] = auth()->id(); //Asigna el ID del usuario autenticado
         $product = Product::create($data);  //Crea el nuevo producto
         return response()->json($product, 201); //Devuelve el producto creado con código 201
@@ -69,16 +99,26 @@ class Productcontroller extends Controller
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'category_id' => 'sometimes|required|exists:categories,id',
+            'category_id' => 'sometimes|required|exists:categories,category_id',
             'price' => 'sometimes|required|numeric|min:0',
             'stock' => 'sometimes|required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'is_active' => 'sometimes|boolean',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
         if ($request->hasFile('image')) {
+            $request->validate([
+                'image' => 'image|mimes:jpg,jpeg,png|max:2048'
+            ]);
+
+            //(opcional) borrar imagen anterior
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+
             $data['image'] = $request->file('image')->store('products', 'public');
         }
+
         $product->update($data); //Actualiza el producto con los datos validados
         return response()->json($product); //Devuelve el producto actualizado
     }
@@ -86,29 +126,33 @@ class Productcontroller extends Controller
     //Funcion para eliminar un producto específico
     public function destroy(Product $product)
     {
+        //Verifica si el producto ya está inactivo
+        if (!$product->is_active) {
+            return response()
+                ->json(['message' => 'El producto ya está inactivo' //Mensaje si el producto ya esta inactivo
+            ], 400);
+        }
         $product->update(['is_active' => false]); //Marca el producto como inactivo
         return response()
             ->json(['message' => 'Producto desactivado' //Devuelve un mensaje de confirmación
         ]);
     }
 
-    //Funcion para buscar productos por nombre
-    public function search(Request $request)
+    //Funcion para reactivar un producto especifico
+    public function reactivate(Product $product)
     {
-        $query = $request->query('query'); //Obtiene el parámetro de consulta 'query'
-        //Validación básica de la consulta
-        if (!$query || strlen($query) < 2) {
-            return response()->json([
-                'message' => 'La búsqueda debe tener al menos 2 caracteres' 
-            ], 422);
+        //Verifica si el producto ya está activo
+        if ($product->is_active) {
+            return response()
+                ->json(['message' => 'El producto ya está activo' //Mensaje si el producto ya esta activo
+            ], 400);
         }
-        //Busca productos activos que coincidan con el nombre
-        $products = Product::where('is_active', true)
-            ->where('name', 'like', "%{$query}%")
-            ->with(['category', 'user'])
-            ->get();
 
-        return response()->json($products);
+        $product->update(['is_active' => true]); //Marca el producto como activo
+        return response()
+            ->json(['message' => 'Producto reactivado', //Devuelve un mensaje de confirmación
+                'product' => $product]
+        );
     }
 
 

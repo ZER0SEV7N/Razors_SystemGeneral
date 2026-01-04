@@ -7,7 +7,7 @@ use Illuminate\Http\Request; //Importa la clase Request
 use App\Models\Category; //Importa el modelo Category
 use App\Http\Controllers\Controller; //Importa el controlador base
 
-class Categorycontroller extends Controller
+class CategoryController extends Controller
 {
     //Funcion para mostrar todas las categorias en formato JSON
     public function index(){

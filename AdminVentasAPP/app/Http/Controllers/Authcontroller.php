@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User; //Modelo de usuario
 use Illuminate\Http\Request; //Manejo de solicitudes HTTP
 use Illuminate\Support\Facades\Hash; //Facades para manejo de contraseñas
-class Authcontroller extends Controller
+class AuthController extends Controller
 {
     //Función para manejar el registro de nuevos usuarios
     public function register(Request $request)

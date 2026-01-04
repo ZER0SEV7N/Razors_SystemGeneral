@@ -10,75 +10,86 @@ import { useEffect, useState } from "react"; //Importar useEffect y useState par
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
 import ProductsTable from "./ProductsTable"; //Importar el componente ProductsTable
 import ProductForm from "./ProductForm"; //Importar el componente ProductForm
+import ProductFilters from "./ProductFilters"; //Importar el componente ProductFilters
+import type { Product } from "../../types"; //Importar la interfaz Product desde los tipos globales
 import "../css/products.css"; //Importar estilos CSS para la pagina de productos
 
 //Funcion componente para la pagina de productos
 const ProductsPage = () => {
-  const [products, setProducts] = useState<any[]>([]); //Estado para almacenar la lista de productos
-  const [editingProduct, setEditingProduct] = useState<any | null>(null); //Estado para el producto que se esta editando
-  const [showForm, setShowForm] = useState(false); //
-  const [showInactive, setShowInactive] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]); //Estado para almacenar la lista de productos
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined); //Estado para el producto que se esta editando
+  const [showForm, setShowForm] = useState(false); //Estado para controlar la visibilidad del formulario de producto
+  const [loading, setLoading] = useState(false); //Estado para indicar si se estan cargando los productos
+  //Estado para los filtros de productos
+  const [filters, setFilters] = useState({
+    search: "", category_id: "", low_stock: false, show_inactive: false, price_min: "", price_max: ""
+  });
 
+  //Funcion para obtener la lista de productos desde la API
   const fetchProducts = async () => {
-  const res = showInactive
-    ? await api.get("/products-inactive")
-    : await api.get("/products");
-
-    setProducts(res.data);
+    setLoading(true);
+    try{
+      //Construir los parametros de consulta basados en los filtros
+      const params = new URLSearchParams();
+      if(filters.search) params.append("search", filters.search); //Filtro de busqueda
+      if(filters.category_id) params.append("category_id", filters.category_id); //Filtro por categoria
+      if(filters.low_stock) params.append("low_stock", "true"); //Filtro por bajo stock
+      if(filters.show_inactive) params.append("show_inactive", "true"); //Filtro para mostrar inactivos
+      if(filters.price_min) params.append("price_min", filters.price_min); //Filtro por precio minimo
+      if(filters.price_max) params.append("price_max", filters.price_max); //Filtro por precio maximo
+      //Realizar la solicitud a la API con los parametros de filtro
+      const res = await api.get(`/products?${params.toString()}`);
+      setProducts(res.data.data); //Actualizar el estado con los productos obtenidos
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }finally {
+      setLoading(false);
+    }
   };
 
-  const deactivateProduct = async (id: number) => {
-    await api.delete(`/products/${id}`);
-    fetchProducts();
-  };
-
+  //Usar useEffect para cargar los productos cuando los filtros cambien
   useEffect(() => {
-    fetchProducts();
-  }, [showInactive]);
+    const timer = setTimeout(() => fetchProducts(), 400); //Agregar un retraso para evitar demasiadas solicitudes
+    return () => clearTimeout(timer);
+  }, [filters]);
 
+  /*-------------------------------------------------------------------
+  //Renderizar la pagina de productos
+  -------------------------------------------------------------------*/
   return (
     <div className="products-page">
-      <header>
-        <h2>Productos</h2>
-
-        <button onClick={() => {
-          setEditingProduct(null);
-          setShowForm(true);
-        }}>
+      {/*------- Cabecera ---------*/}
+      <header className="header-actions">
+        <h2>Inventario</h2>
+        <button className="btn-primary" onClick={() => { setEditingProduct(undefined); setShowForm(true); }}>
           + Nuevo Producto
         </button>
-
-        <label>
-          <input
-            type="checkbox"
-            checked={showInactive}
-            onChange={() => setShowInactive(!showInactive)}
-          />
-          Ver inactivos
-        </label>
-      </header>
-
-      <ProductsTable
-        products={products}
-        onEdit={(product) => {
-          setEditingProduct(product);
-          setShowForm(true);
-        }}
-        onDeactivate={deactivateProduct}
-      />
-
-      {showForm && (
-        <ProductForm
-          product={editingProduct}
-          onSuccess={() => {
-            fetchProducts();
-            setShowForm(false);
-            setEditingProduct(null);
-          }}
+      </header>{/*------- Tabla de productos ---------*/}
+      {/*------- Filtros de productos ---------*/}
+      <ProductFilters filters={filters} onChange={setFilters} />
+      {loading ? <div className="loading-indicator">Cargando productos...</div> : (
+        
+        <ProductsTable
+          products={products}
+          onEdit={(p) => { setEditingProduct(p); setShowForm(true); }}
+          onDeactivate={async (id) => { await api.delete(`/products/${id}`); fetchProducts(); }}
+          onActivate={async (id) => { await api.put(`/products/${id}/reactivate`); fetchProducts(); }}
         />
+      )}
+      {/*------- Formulario de producto ---------*/}
+      {showForm && (
+        <div className="modal-overlay">
+           <div className="modal-content">
+              <button className="close-btn" onClick={()=>setShowForm(false)}>X</button>
+              <ProductForm 
+                product={editingProduct} 
+                onSuccess={() => { fetchProducts(); setShowForm(false); }} 
+              />
+           </div>
+        </div>
       )}
     </div>
   );
 };
 
-export default ProductsPage;
+export default ProductsPage; //Exportar el componente ProductsPage

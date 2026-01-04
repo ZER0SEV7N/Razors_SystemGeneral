@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table) {
-            $table->id(); //
+            $table->id('category_id'); //Clave primaria de la tabla categories
             $table->string('name')->unique(); //Nombre de la categoría, único
             $table->text('description')->nullable(); //Descripción de la categoría (permite nulos)
             $table->boolean('is_active')->default(true); //Indica si la categoría está activa, valor por defecto true

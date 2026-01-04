@@ -1,67 +1,144 @@
+/* src/components/css/layout.css */
+
+/* 1. RESET BÁSICO */
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 2. CONTENEDOR PRINCIPAL (Flexbox) */
 .layout {
     display: flex;
-    min-height: 100vh;
+    height: 100vh; /* Ocupa toda la altura de la pantalla */
+    overflow: hidden; /* Evita scroll en el body principal */
 }
 
-.layout-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.main-content {
-    flex: 1;
-    padding: 20px;
-    background: #f1f5f9;
-    overflow-y: auto;
-}
-
-.navbar {
-    height: 60px;
-    background: #000000;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    justify-content: space-between;
-    color: #ffffff;
-}
+/* 3. SIDEBAR (Lateral Izquierdo) */
 .sidebar {
-    width: 240px;
-    background: #1e293b;
-    color: white;
+    width: 260px; /* Ancho fijo */
+    background-color: #1e293b; /* Color oscuro (Slate-800) */
+    color: #fff;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0; /* Evita que se encoja */
+    transition: width 0.3s ease;
 }
 
+/* Sección de Usuario en Sidebar */
 .sidebar-user {
-    text-align: center;
     padding: 20px;
     border-bottom: 1px solid #334155;
+    text-align: center;
 }
 
 .sidebar-user img {
     width: 80px;
     height: 80px;
     border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3b82f6; /* Borde azul */
     margin-bottom: 10px;
 }
 
-.sidebar-menu {
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
+.sidebar-user h4 {
+    margin: 5px 0;
+    font-size: 16px;
+    font-weight: 600;
 }
 
+.sidebar-user small {
+    color: #94a3b8; /* Gris claro */
+    font-size: 12px;
+}
+
+/* Menú de Navegación */
+.sidebar-menu {
+    flex: 1; /* Ocupa el espacio restante */
+    display: flex;
+    flex-direction: column;
+    padding: 20px 10px;
+    gap: 5px;
+    overflow-y: auto; /* Scroll si el menú es muy largo */
+}
+
+/* Enlaces del Menú */
 .sidebar-menu a {
-    color: #cbd5e1;
     text-decoration: none;
-    padding: 12px;
-    border-radius: 6px;
+    color: #cbd5e1;
+    padding: 12px 15px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
 }
 
 .sidebar-menu a:hover {
-    background: #334155;
+    background-color: #334155;
     color: white;
+    padding-left: 20px; /* Pequeño efecto de movimiento */
+}
+
+/* Clase automática que React Router agrega al link activo */
+.sidebar-menu a.active {
+    background-color: #3b82f6; /* Azul primario */
+    color: white;
+    font-weight: 600;
+}
+
+/* Botón de Cerrar Sesión (dentro del menú) */
+.sidebar-menu button {
+    margin-top: auto; /* Empuja el botón al final si hay espacio */
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+}
+
+.sidebar-menu button:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* 4. CONTENIDO DERECHO (Navbar + Main) */
+.layout-content {
+    flex: 1; /* Ocupa todo el ancho restante */
+    display: flex;
+    flex-direction: column;
+    background-color: #f1f5f9; /* Fondo gris claro para el contenido */
+}
+
+/* NAVBAR */
+.navbar {
+    height: 64px;
+    background-color: white;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.navbar h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.2rem;
+}
+
+/* MAIN CONTENT (Donde se renderizan las páginas) */
+.main-content {
+    flex: 1; /* Ocupa la altura restante debajo del navbar */
+    overflow-y: auto; /* IMPORTANTE: Permite scroll solo aquí */
+    padding: 0; /* Quitamos padding aquí para que el Dashboard controle el suyo */
+    position: relative;
 }
