@@ -66,7 +66,7 @@ const ProductFilters = ({ filters, onChange }: Props) => {
             {/* Barra de filtros */}
             <div className="filter-group search-group">
                 <input name="search" 
-                    placeholder="buscar..." 
+                    placeholder="Buscar..." 
                     value={filters.search} 
                     onChange={handleChange} 
                     className="filter-input"

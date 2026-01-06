@@ -94,7 +94,7 @@ const Dashboard = () => {
         <div className="stat-card card-orange">
             <h3 className="stat-title">Valor del Inventario</h3>
             <p className="stat-value">
-                ${Number(stats?.inventory_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${Number(stats?.inventory_value).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </p>
           </div>
         {/* 3. Accesos Rápidos (Quick Actions) */}
@@ -107,8 +107,8 @@ const Dashboard = () => {
                 >
                     📦 Gestionar Inventario
                 </button>
-                <button className="btn-action btn-green">
-                    🛒 Nueva Venta (Próximamente)
+                <button className="btn-action btn-green" onClick={() => window.location.href='/sales'}>
+                    🛒 Generar Venta
                 </button>
             </div>
           </div>

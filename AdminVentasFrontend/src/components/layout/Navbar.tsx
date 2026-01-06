@@ -11,7 +11,7 @@ import "../css/layout.css"; //Importar estilos CSS para el modal
 const Navbar = () => {
     return (
         <header className="navbar">
-            <h3>AdminVentas</h3>
+            <h3>RAZORS ~ Administracion</h3>
         </header>
     );
 }

@@ -30,8 +30,6 @@ return new class extends Migration
         //Eliminar índices si se revierte la migración
         Schema::table('products', function (Blueprint $table) {
             $table->dropIndex(['is_active']);
-            $table->dropIndex(['category_id']);
-            $table->dropIndex(['user_id']);
             $table->dropIndex(['price']);
         });
     }

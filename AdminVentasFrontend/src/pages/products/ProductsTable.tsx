@@ -29,7 +29,7 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
       <table className="products-table">
         <thead>
             <tr>
-            <th style={{ width: '60px' }}>Img</th>
+            <th style={{ width: '60px' }}>Imagen</th>
             <th style={{ width: '25%' }}>Nombre</th>
             <th style={{ width: '15%' }}>Categoría</th>
             <th style={{ width: '10%' }}>Precio</th>

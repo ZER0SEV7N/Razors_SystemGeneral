@@ -13,6 +13,7 @@ import api from "../../lib/api"; //Importar la instancia de axios configurada pa
 //Definir la interfaz para la informacion del usuario
 interface User {
     name: string;
+    last_name: string;
     email: string;
     avatar?: string;
 }
@@ -63,15 +64,17 @@ const Sidebar = () => {
         <aside className="sidebar">
             <div className="sidebar-user">
                 <img src={user.avatar || "https://i.pravatar.cc/150"} alt ="avatar" />
-                <h4>{user.name}</h4>
+                <h4>{user.name} {user.last_name}</h4>
                 <small>{user.email}</small>
             </div>
 
             <nav className="sidebar-menu">
                 <NavLink to="/dashboard">Dashboard</NavLink>
-                <NavLink to="/products">Productos</NavLink>
-                <NavLink to="/categories">Categorías</NavLink>
-                <NavLink to="/sales">Ventas</NavLink>
+                <NavLink to="/products">Administrar Inventario</NavLink>
+                <NavLink to="/categories">Administrar Categorías</NavLink>
+                <NavLink to="/clients">Administrar Clientes</NavLink>
+                <NavLink to="/sales">Generar Ventas</NavLink>
+                <NavLink to="/sales/history">Historial de Ventas</NavLink>
                 <NavLink to="/reports">Reportes</NavLink>
                 <NavLink to="/settings">Configuración</NavLink>
                 <button onClick={handleLogout}>Cerrar Sesión</button>

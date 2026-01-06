@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 
 /*-------------------------------------------------------
@@ -56,4 +58,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Rutas CRUD para la gestion de categorias
     Route::apiResource('categories', CategoryController::class); //http://localhost:8000/api/categories
+
+    /*-------------------------------------------------------
+    ---- RUTAS PARA VENTAS ------------------------------
+    --------------------------------------------------------*/
+    
+    //Rutas CRUD para la gestion de ventas
+    Route::apiResource('sales', SaleController::class)->only(['index', 'store', 'show', 'cancel']); //http://localhost:8000/api/sales
+    //Rutas CRUD para la gestion de clientes
+    Route::apiResource('clients', ClientController::class); //http://localhost:8000/api/clients
+    
+    /*-------------------------------------------------------
+    ---- RUTAS PARA REPORTES ------------------------------
+    --------------------------------------------------------*/
+    Route::controller(App\Http\Controllers\ReportController::class)->group(function () {
+        // 1. Factura Individual (ej: /reports/sales/10)
+        Route::get('/reports/sales/{id}', 'saleInvoice');
+        // 2. Reporte Mensual (ej: /reports/monthly?month=1&year=2026) 
+        Route::get('/reports/monthly', 'monthlySales');
+    });
 });

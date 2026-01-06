@@ -8,7 +8,8 @@
 --------------------------------------------------------------------*/
 import { useState } from "react"; //Importar useState para manejar el estado 
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
-import "../css/Modal.css"; //Importar estilos CSS para el modal
+import Modal from "./ModalExample";
+import "../css/categories.css"; // <--- Importamos el CSS nuevo
 
 //Definir la interfaz para las props del componente
 interface Props {
@@ -18,18 +19,19 @@ interface Props {
 
 //Funcion componente para el modal de categorías
 const CategoriesModal = ({ onClose, onCreated }: Props) => {
-    const [form, setForm] = useState({
+    const [loading, setLoading] = useState(false); // Estado para evitar doble click
+    const [form, setForm] = useState({ 
         name: "",
         description: "",
-        is_active: true,
-    });
+    }); //Estado para los campos del formulario
     
     //Funcion para subir el formulario
     const submitForm = async () => {
         if(!form.name){
             alert("El nombre es obligatorio"); //Validar que el nombre no esté vacío
             return;
-        } 
+        }
+        setLoading(true); 
         try{
             await api.post("/categories", form); //Enviar la solicitud para crear la categoría
             onCreated(); //Notificar que se creó una nueva categoría
@@ -37,36 +39,44 @@ const CategoriesModal = ({ onClose, onCreated }: Props) => {
         }catch(error){
             console.error("Error al crear la categoría:", error);
             alert("Error al crear la categoría"); //Mostrar un mensaje de error
+        }finally{
+            setLoading(false);
         }
 
     };
 
     return(
-        <div className="modal-backdrop">
-            <div className="modal">
-                <h3>Nueva Categoria de Producto</h3>
+        <Modal isOpen={true} onClose={onClose} title="Nueva Categoría">
+            <div className="category-form-content">
+                
+                <label>Nombre de la Categoría:</label>
                 <input
-                    placeholder="Nombre de la categoria"
+                    placeholder="Ej: Bebidas, Limpieza..."
                     value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value})}
-                    />
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    autoFocus
+                />
+
+                <label>Descripción (Opcional):</label>
                 <textarea
-                    placeholder="Descripción"
+                    placeholder="¿Qué tipo de productos incluye?"
                     value={form.description}
-                    onChange={e => setForm({ ...form, description: e.target.value})}
-                    />
-                <label>
-                    <input type="checkbox"
-                    checked={form.is_active}
-                    onChange={() => setForm({ ...form, is_active: !form.is_active })}
-                    />
-                </label>
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    rows={3}
+                />
+
+                {/* Botones con clases CSS */}
                 <div className="modal-actions">
-                    <button onClick={onClose}>Cancelar</button>
-                    <button className="btn-secondary" onClick={submitForm}>Crear Categoria</button>
+                    <button className="btn-cancel" onClick={onClose}>
+                        Cancelar
+                    </button>
+                    <button className="btn-save" onClick={submitForm} disabled={loading}>
+                        {loading ? "Guardando..." : "Guardar Categoría"}
+                    </button>
                 </div>
+
             </div>
-        </div>
+        </Modal>
     );
 };
 

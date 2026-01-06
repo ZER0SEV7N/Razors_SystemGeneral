@@ -11,6 +11,7 @@ import api from "../../lib/api"; //Importar la instancia de axios configurada pa
 import ProductsTable from "./ProductsTable"; //Importar el componente ProductsTable
 import ProductForm from "./ProductForm"; //Importar el componente ProductForm
 import ProductFilters from "./ProductFilters"; //Importar el componente ProductFilters
+import Modal from "../../components/ui/ModalExample"; //Importar el componente ModalExample
 import type { Product } from "../../types"; //Importar la interfaz Product desde los tipos globales
 import "../css/products.css"; //Importar estilos CSS para la pagina de productos
 
@@ -77,17 +78,22 @@ const ProductsPage = () => {
         />
       )}
       {/*------- Formulario de producto ---------*/}
-      {showForm && (
-        <div className="modal-overlay">
-           <div className="modal-content">
-              <button className="close-btn" onClick={()=>setShowForm(false)}>X</button>
-              <ProductForm 
-                product={editingProduct} 
-                onSuccess={() => { fetchProducts(); setShowForm(false); }} 
+      <Modal isOpen={showForm} 
+        onClose={() => setShowForm(false)} 
+        title={editingProduct ? "Editar Producto" : "Nuevo Producto"}
+      >
+        <ProductForm 
+          product={editingProduct} 
+          onSuccess={() => { fetchProducts(); 
+            setShowForm(false);
+            setEditingProduct(undefined); 
+          }}
+          onCancel={() => {
+            setShowForm(false); //Cierra el modal al cancelar
+            setEditingProduct(undefined);
+          }} 
               />
-           </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 };

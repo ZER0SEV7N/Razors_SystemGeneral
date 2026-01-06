@@ -16,10 +16,11 @@ import type { Category } from "../../types";
 interface Props {
     product?: any; //Producto a editar (opcional)
     onSuccess: () => void; //Función a llamar después de una creación o edición exitosa
+    onCancel?: () => void; //Función a llamar al cancelar (opcional)
 }
 
 //Funcion componente para el formulario de productos
-const ProductForm = ({ product,onSuccess}: Props) =>{
+const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
     const [categories, setCategories] = useState<Category[]>([]); //Estado para almacenar la lista de categorías
     const [showCategoryModal, setShowCategoryModal] = useState(false); //Estado para mostrar/ocultar el modal de categorías
     const [loading, setLoading] = useState(false); // Estado para evitar doble click
@@ -110,33 +111,69 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
 
   return (
     <div className="product-form">
-      <h3>{product ? "Editar Producto" : "Nuevo Producto"}</h3>
+    {/* Input de Nombre */}
+      <input 
+        name="name" 
+        value={form.name} 
+        onChange={handleChange} 
+        placeholder="Nombre del producto" 
+      />
       
-      <input name="name" value={form.name} onChange={handleChange} placeholder="Nombre" />
-      
-      <textarea name="description" placeholder="Descripción" value={form.description} onChange={handleChange} />
+      {/* Textarea de Descripción */}
+      <textarea 
+        name="description" 
+        placeholder="Descripción" 
+        value={form.description} 
+        onChange={handleChange} 
+      />
 
-      {/* Input de Categoría */}
-      <div style={{ display: "flex", gap: "8px" }}>
-        <select name="category_id" value={form.category_id} onChange={handleChange}>
+      {/* Fila: Categoría + Botón */}
+      <div className="form-row">
+        <select 
+            name="category_id" 
+            value={form.category_id} 
+            onChange={handleChange}
+            className="flex-grow" // Clase auxiliar para que ocupe espacio
+        >
           <option value="">Seleccione una categoría</option>
           {categories.map((cat) => (
             <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
           ))}
         </select>
-        <button type="button" onClick={() => setShowCategoryModal(true)}>+ Cat</button>
+        <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>
+          + Cat
+        </button>
       </div>
 
-      <div className="form-row" style={{display: 'flex', gap: '10px'}}>
-        <input name="price" type="number" placeholder="Precio S/." value={form.price} onChange={handleChange} style={{flex: 1}}/>
-        <input name="stock" type="number" placeholder="Stock" value={form.stock} onChange={handleChange} style={{flex: 1}}/>
+      {/* Fila: Precio + Stock */}
+      <div className="form-row">
+        <input 
+            name="price" 
+            type="number" 
+            placeholder="Precio S/." 
+            value={form.price} 
+            onChange={handleChange} 
+        />
+        <input 
+            name="stock" 
+            type="number" 
+            placeholder="Stock" 
+            value={form.stock} 
+            onChange={handleChange} 
+        />
       </div>
       
-      <input name="min_stock" type="number" placeholder="Stock mínimo" value={form.min_stock} onChange={handleChange} />
+      <input 
+        name="min_stock" 
+        type="number" 
+        placeholder="Stock mínimo (Alerta)" 
+        value={form.min_stock} 
+        onChange={handleChange} 
+      />
 
-      {/*Campo para imagenes*/}
-      <div className="file-input-container" style={{ margin: '10px 0' }}>
-        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Imagen del Producto:</label>
+      {/* Input de Imagen */}
+      <div className="file-input-container">
+        <label>Imagen del Producto:</label>
         <input 
           type="file" 
           accept="image/*"
@@ -148,9 +185,24 @@ const ProductForm = ({ product,onSuccess}: Props) =>{
         />
       </div>
 
-      <button onClick={submitForm} disabled={loading} className="btn-primary">
-        {loading ? "Guardando..." : (product ? "Actualizar" : "Crear") + " Producto"}
-      </button>
+      {/* Botones de acción */}
+      <div className="form-actions">
+          <button 
+            type="button" 
+            onClick={onCancel}
+            className="btn-secondary"
+          >
+            Cancelar
+          </button>
+
+          <button 
+            onClick={submitForm} 
+            disabled={loading} 
+            className="btn-primary"
+          >
+            {loading ? "Guardando..." : (product ? "Actualizar" : "Crear")}
+          </button>
+      </div>
 
       {showCategoryModal && (
         <CategoriesModal

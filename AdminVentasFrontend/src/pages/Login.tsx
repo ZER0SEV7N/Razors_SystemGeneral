@@ -50,23 +50,25 @@ const Login = () => {
     };
     //Renderizar el formulario de login
     return (
-        <div className="login-container">
-            <h1>Bienvenido a Razors System Administration.</h1>
-            <h2>Iniciar Sesión.</h2>
-            <form onSubmit={handleLogin}>
-                <div>
-                    <label htmlFor="email">Correo Electrónico:</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-email" required/>
-                </div>
-                <div>
-                    <label htmlFor="password">Contraseña:</label>
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-password" required/>
-                </div>
-                {error && <p className="error-message">{error}</p>}
-                <button type="submit" disabled={loading} className="btn-login">
-                    {loading ? "Procesando..." : "Iniciar Sesión"}
-                </button>
-            </form>
+        <div className="login-wrapper">
+            <div className="login-container">
+                <h1>Bienvenido a Razors System Administration.</h1>
+                <h2>Iniciar Sesión.</h2>
+                <form onSubmit={handleLogin}>
+                    <div>
+                        <label htmlFor="email">Correo Electrónico:</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-email" required/>
+                    </div>
+                    <div>
+                        <label htmlFor="password">Contraseña:</label>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-password" required/>
+                    </div>
+                    {error && <p className="error-message">{error}</p>}
+                    <button type="submit" disabled={loading} className="btn-login">
+                        {loading ? "Procesando..." : "Iniciar Sesión"}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }
