@@ -19,7 +19,17 @@ export interface User {
     user_id: number;
     name: string;
     last_name: string;
+    role: 'ADMIN' | 'VENDEDOR' | 'GERENTE'; // Tipado estricto para roles
     email: string;
+    avatar?: string; //Campo opcional para la ruta del avatar
+}
+
+//Interfaz para configuracion de compañia
+export interface CompanySettings {
+    name: string;
+    address: string;
+    phone: string;
+    logo_path?: string;
 }
 
 //Interfaz para un producto

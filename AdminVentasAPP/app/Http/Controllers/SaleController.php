@@ -13,11 +13,21 @@ use Illuminate\Support\Facades\DB;
 class SaleController extends Controller
 {
     //Métodos para gestionar las ventas (index, show, store, update, destroy) irían aquí
-    public function index()
+    public function index(Request $request)
     {
-        $sales = Sale::with(['client', 'user', 'details.product'])
-            ->latest()
-            ->paginate(10);
+        $user = $request->user();
+
+        //Cargamos relaciones útiles
+        $query = Sale::with(['client', 'user', 'details.product']);
+
+        //🔒 FILTRO DE SEGURIDAD:
+        //Si NO es Admin, solo ve las ventas de su propia sucursal
+        if ($user->role !== 'ADMIN') {
+            $query->where('branch_id', $user->branch_id);
+        }
+
+        //Aplicar filtros de búsqueda si se proporcionan
+        $sales = $query->latest()->paginate(10);
         return response()->json($sales);
     }
 
@@ -30,64 +40,78 @@ class SaleController extends Controller
             'products' => 'required|array|min:1', //Es necesario un solo producto
             'products.*.product_id' => 'required|exists:products,product_id',
             'products.*.quantity' => 'required|integer|min:1',
+            'payment_method' => 'required|string', 
+            'payment_reference' => 'nullable|string'
         ]);
+
+        $user = $request->user();
+
+        // El vendedor DEBE tener una sede asignada para poder vender
+        if (!$user->branch_id) {
+            return response()->json(['message' => 'No tienes una sucursal asignada para realizar ventas.'], 403);
+        }
 
         try{
             //2. Iniciar la transaccion
-            DB::beginTransaction(); 
-            //Calcular el total de la venta y preparar los datos
-            $totalSale = 0;
-            $saleDetails = [];
+            return DB::transaction(function () use ($request, $user) { 
+                //Calcular el total de la venta y preparar los datos
+                $totalSale = 0;
+                $saleDetails = [];
 
-            //3. Crear la cabecera de la venta
-            $sale = Sale::create([
-                'user_id' => $request->user()->user_id, //Asignar el usuario autenticado como vendedor
-                'client_id' => $request->client_id,
-                'sale_date' => now(),
-                'total' => 0, //Se actualizara luego
-                'status' => 'PENDIENTE',
-            ]);
-
-            //4. Procesar cada producto
-            foreach($request->products as $item){
-                $product = Product::lockForUpdate()->find($item['product_id']);
-
-                //Verificar stock
-                if($product->stock < $item['quantity']){
-                    throw new \Exception("Stock insuficiente para el producto: {$product->name}");
-                }
-
-                //Calcular subtotal
-                $price = $product->price;
-                $subtotal = $price * $item['quantity'];
-
-                //Crear el detalle de venta
-                SaleDetail::create([
-                    'sale_id' => $sale->sale_id,
-                    'product_id' => $product->product_id,
-                    'quantity' => $item['quantity'],
-                    'price' => $price, //precio unitario Historico
-                    'subtotal' => $subtotal,
+                //3. Crear la cabecera de la venta
+                $sale = Sale::create([
+                    'user_id' => $request->user()->user_id, //Asignar el usuario autenticado como vendedor
+                    'branch_id' => $user->branch_id, //Asignar la sucursal del vendedor
+                    'client_id' => $request->client_id,
+                    'sale_date' => now(),
+                    'total' => 0, //Se actualizara luego
+                    'status' => 'PENDIENTE',
+                    'payment_method' => $request->payment_method,      
+                    'payment_reference' => $request->payment_reference 
                 ]);
 
-                //Actualizar el stock del producto
-                $product->decrement('stock', $item['quantity']);
+                //4. Procesar cada producto
+                foreach($request->products as $item){
+                    //Bloquear el producto para evitar condiciones de carrera
+                    $product = Product::lockForUpdate()->find($item['product_id']);
 
-                //Sumar al gran total
-                $totalSale += $subtotal;
-            }
+                    //Verificar stock
+                    if($product->stock < $item['quantity']){
+                        throw new \Exception("Stock insuficiente para el producto: {$product->name}");
+                    }
 
-            //5. Actualizar el total de la venta
-            $sale->update(['total' => $totalSale]);
+                    //Calcular subtotal
+                    $price = $product->price;
+                    $subtotal = $price * $item['quantity'];
 
-            //6. Confirmar la transaccion
-            DB::commit();
+                    //Crear el detalle de venta
+                    SaleDetail::create([
+                        'sale_id' => $sale->sale_id,
+                        'product_id' => $product->product_id,
+                        'quantity' => $item['quantity'],
+                        'price' => $price, //precio unitario Historico
+                        'subtotal' => $subtotal,
+                    ]);
 
-            //7. Retornar la respuesta
-            return response()->json([
-                'message' => 'Venta registrada con exito',
-                'sale_id' => $sale->sale_id,
-            ], 201);
+                    //Actualizar el stock del producto
+                    $product->decrement('stock', $item['quantity']);
+
+                    //Sumar al gran total
+                    $totalSale += $subtotal;
+                }
+
+                //5. Actualizar el total de la venta
+                $sale->update(['total' => $totalSale]);
+
+                //6. Confirmar la transaccion
+                DB::commit();
+
+                //7. Retornar la respuesta
+                return response()->json([
+                    'message' => 'Venta registrada con exito',
+                    'sale_id' => $sale->sale_id,
+                ], 201);
+            });
         }catch (\Exception $e){
             //8. En caso de error, revertir la transaccion
             DB::rollBack();
@@ -109,44 +133,44 @@ class SaleController extends Controller
         return response()->json($sale);
     }
 
-    //Funcion para Anular una venta
-    public function cancel($id)
+    //Funcion Para actualizar el estado de una venta (por ejemplo, marcar como COMPLETADO o CANCELADO)
+    public function update(Request $request, $id)
     {
-        $sale = Sale::with('details')->find($id);
+        //Validar el status
+        $request->validate([
+            'status' => 'required|in:PAGADO,CANCELADO'
+        ]);
 
-        //Verificar si la venta existe
-        if(!$sale){
-            return response()->json(['message' => 'Venta no encontrada'], 404);
-        }
-        //Solo se pueden anular ventas PENDIENTES
-        if($sale->status === 'CANCELADO'){
-            return response()->json(['message' => 'La venta ya está cancelada'], 400);
-        }
+        //Buscar la venta
+        return DB::transaction(function() use ($request, $id){
+            $sale = Sale::with('details')->findOrFail($id);
 
-        try{
-            DB::beginTransaction();
-
-            //A. Devolver el stock de los productos
-            foreach($sale->details as $detail){
-                $product = Product::find($detail->product_id);
-                //En caso de encontrar el producto
-                if ($product){
-                    $product->increment('stock', $detail->quantity);
-                }
-            
-                //B. Actualizar el estado de la venta
-                $sale->update(['status' => 'CANCELADO']);
-                //C. Confirmar la transaccion
-                DB::commit();
-
-                return response()->json(['message' => 'Venta cancelada con exito, el stock ha sido restaurado']);
+            //Evitar cambios si se ha procesado la solicitud
+            if ($sale->status === 'CANCELADO' || $sale->status === 'PAGADO') {
+                return response()->json(['message' => 'No se puede modificar una venta ya procesada'], 400);
             }
-        }catch (\Exception $e){
-            //D. En caso de error, revertir la transaccion
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al cancelar la venta: ' . $e->getMessage()
-            ], 500);
-        }
+
+            //Caso A: Aprobar la venta (confirmado)
+            if($request->status === 'PAGADO'){
+                $sale->update(['status' => 'PAGADO']);
+                return response()->json(['message' => 'Venta APROBADA exitosamente']);
+            }
+
+            //Caso B: Cancelar la venta
+            if($request->status === 'CANCELADO'){
+                //Restaurar el stock de los productos
+                foreach($sale->details as $detail){
+                    Product::where('product_id', $detail->product_id)
+                        ->increment('stock', $detail->quantity);
+                }
+                $sale->update(['status' => 'CANCELADO']);
+                return response()->json(['message' => 'Venta CANCELADA exitosamente']);
+            }
+        });
+    }
+    //Bloquear la eliminacion de ventas
+    public function destroy($id) {
+        return response()->json(['message' => 'Acción no permitida. Use CANCELAR.'], 403);
     }
 }
+

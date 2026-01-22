@@ -11,6 +11,7 @@ import ProtectedRoute from "./lib/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
 import ProductsPage from "./pages/products/ProductsPage";
 import SalesPage from "./pages/sales/salesPage";
+import ClientsPage from "./pages/clients/clientsPage";
 import SalesHistory from "./pages/sales/salesHistory";
 
 function App() {
@@ -24,8 +25,9 @@ function App() {
                     <Route element={<MainLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/products" element={<ProductsPage />} />
+                        <Route path="/clients" element={<ClientsPage />} />
                         <Route path="/sales" element={<SalesPage />} />
-                        <Route path="/sales/history" element={<SalesHistory />} />
+                        <Route path="/history" element={<SalesHistory />} />
                     </Route>
                 </Route>
                 {/* Ruta por defecto */}

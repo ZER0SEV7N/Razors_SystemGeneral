@@ -4,6 +4,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory; //Habilita el uso de fábricas para el modelo
+use Illuminate\support\Facades\Storage; //Para manejo de almacenamiento de archivos
 
 class Product extends Model
 {
@@ -39,5 +40,28 @@ class Product extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    //--Eventos del modelo de producto
+    protected static function booted()
+    {
+        //Evento al eliminar un producto
+        static::deleting(function ($product) {
+            //Eliminar la imagen asociada al producto si existe
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);            
+            }
+        });
+
+        //Evento al actualizar un producto
+        static::updating(function ($product) {
+            //Si la imagen ha cambiado, eliminar la imagen antigua
+            if ($product->isDirty('image')) {
+                $originalImage = $product->getOriginal('image');
+                if ($originalImage) {
+                    Storage::disk('public')->delete($originalImage);
+                }
+            }
+        });
     }
 }

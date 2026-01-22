@@ -20,6 +20,8 @@ return new class extends Migration
             $table->dateTime('sale_date'); //fecha de la venta
             $table->decimal('total', 10, 2); //Monto total de la venta
             $table->ENUM('status', ['PENDIENTE', 'PAGADO', 'CANCELADO', 'ERROR'])->default('PENDIENTE'); //estado de la venta
+            $table->string('payment_method')->nullable(); //metodo de pago utilizado
+            $table->string('payment_reference')->nullable(); //referencia del pago, puede ser nulo
             $table->timestamps();
 
             //FK CLIENTS: Si se borra el cliente, poner NULL

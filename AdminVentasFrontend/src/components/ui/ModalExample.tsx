@@ -2,7 +2,6 @@
 //Componente que muestra un modal base para ser reutilizado en diferentes partes de la aplicación.
 //Importaciones necesarias desde React y librerías de UI.
 import React from 'react';
-import "../css/Modal.css"; // Importación del archivo CSS para estilos del modal
 
 //Interface para las props del componente ModalExample
 interface ModalProps{

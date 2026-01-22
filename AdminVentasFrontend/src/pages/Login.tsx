@@ -9,7 +9,7 @@
 import { useState } from "react"; //Importar useState para manejar el estado del componente
 import { useNavigate } from "react-router-dom"; //Importar useNavigate para la navegacion entre paginas
 import api from "../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
-import "../pages/css/login.css"; //Importar estilos CSS para la pagina de login
+import "./css/Login.css"; //Importar estilos CSS para la pagina de login (Ajustado a ruta relativa estándar)
 
 //Componente de Login
 const Login = () => {
@@ -22,32 +22,42 @@ const Login = () => {
     //Funcion para el manejo del envio del formulario del Login
     //Utilizando la peticion HTTP/POST a la API
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault(); //Prevenir el comportamiento por defecto del formulario
+        e.preventDefault(); //Prevenir el comportamiento por defecto del formulario (Evita recarga)
+        
         setLoading(true); //Indicar que se inicio el proceso de login
         setError(""); //Limpiar errores previos
+
         try{
             //Realizar la peticion POST a la API para el login
             const res = await api.post("/login", {
                 email, password
             });
+
             //Guardar el token de autenticacion en el almacenamiento local
             const { token, user } = res.data;
+
             //Verificar que se recibio el token y la informacion del usuario
             if(!token || !user){
                 throw new Error("Token de autenticacion no recibido");
             }
-            console.log("LOGIN COMPONENT RENDER");
+            console.log("LOGIN EXITOSO");
 
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
+            
             //Redirigir al usuario a la pagina principal despues del login exitoso
             navigate("/dashboard");
-        }catch (err) {  
-            setError("Error de autenticacion. Verifique sus credenciales."); //Establecer el mensaje de error
+
+        } catch (err: any) {  
+            console.error("Error en login:", err);
+            // Capturar mensaje del backend si existe, sino usar mensaje genérico
+            const msg = err.response?.data?.message || "Error de autenticacion. Verifique sus credenciales.";
+            setError(msg); //Establecer el mensaje de error
         } finally {
             setLoading(false); //Indicar que el proceso de login ha finalizado
         }
     };
+
     //Renderizar el formulario de login
     return (
         <div className="login-wrapper">
@@ -57,13 +67,32 @@ const Login = () => {
                 <form onSubmit={handleLogin}>
                     <div>
                         <label htmlFor="email">Correo Electrónico:</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-email" required/>
+                        <input 
+                            type="email" 
+                            id="email"
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            className="input-email" 
+                            required
+                            placeholder="ejemplo@correo.com"
+                        />
                     </div>
                     <div>
                         <label htmlFor="password">Contraseña:</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-password" required/>
+                        <input 
+                            type="password" 
+                            id="password"
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            className="input-password" 
+                            required
+                            placeholder="••••••••"
+                        />
                     </div>
-                    {error && <p className="error-message">{error}</p>}
+
+                    {/* Mensaje de error condicional */}
+                    {error && <div className="error-message">⚠️ {error}</div>}
+
                     <button type="submit" disabled={loading} className="btn-login">
                         {loading ? "Procesando..." : "Iniciar Sesión"}
                     </button>

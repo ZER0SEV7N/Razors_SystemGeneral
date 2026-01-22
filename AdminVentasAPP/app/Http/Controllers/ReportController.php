@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf; //Importar la fachada de PDF
 use App\Models\Sale; //Importar el modelo Sale
 use App\Models\SaleDetail; //Importar el modelo SaleDetail
 use App\Models\Client; //Importar el modelo Client
+use App\Models\CompanySetting; //Importar el modelo CompanySetting (Se utilizara para el logo y datos de la empresa)
 use App\Models\Product; //Importar el modelo Product
 use Carbon\Carbon; //Importar Carbon para manejo de fechas
 
@@ -16,16 +17,11 @@ class ReportController extends Controller
     //Funcion para generar el PDF de una venta (Boleta o Factura)
     public function saleInvoice($id)
     {
-        $sale = Sale::with(['client', 'user', 'details.product'])->find($id);
+        $sale = Sale::with(['client', 'user', 'details.product'])->findOrFail($id);
+        $company = CompanySetting::first(); // Datos de la empresa
 
-        if(!$sale){
-            abort(404, 'Venta no encontrada');
-        }    
-
-        $pdf = Pdf::loadView('pdf.invoice', compact('sale'));
-        //Configurar el papel y la orientacion
-        $pdf->setPaper('A4', 'portrait');
-        return $pdf->stream('venta-'.$id.'.pdf');
+        $pdf = Pdf::loadView('pdf.invoice', compact('sale', 'company'));
+        return $pdf->stream('boleta-'.$id.'.pdf');
     }
 
     //Funcion para generar un reporte Mensual de todas las ventas
@@ -34,6 +30,7 @@ class ReportController extends Controller
         //Recibir el mes y año desde la solicitud
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
+        $company = CompanySetting::first();
 
         //Consultar las ventas del mes
         $sales = Sale::with('user')
@@ -60,5 +57,20 @@ class ReportController extends Controller
         //Generar el PDF
         $pdf = Pdf::loadView('pdf.monthly_report', $data);
         return $pdf->stream('reporte-mensual-'.$month.'-'.$year.'.pdf');
+    }
+
+    // [NUEVO] REPORTE DE INVENTARIO (Para auditoría)
+    public function inventoryReport()
+    {
+        $products = Product::with('category')
+                    ->where('is_active', true)
+                    ->orderBy('category_id')
+                    ->get();
+        
+        $company = CompanySetting::first();
+        $totalValue = $products->sum(function($p) { return $p->price * $p->stock; });
+
+        $pdf = Pdf::loadView('pdf.inventory', compact('products', 'totalValue', 'company'));
+        return $pdf->stream('reporte-inventario.pdf');
     }
 }

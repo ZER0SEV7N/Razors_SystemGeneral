@@ -74,7 +74,7 @@ const Sidebar = () => {
                 <NavLink to="/categories">Administrar Categorías</NavLink>
                 <NavLink to="/clients">Administrar Clientes</NavLink>
                 <NavLink to="/sales">Generar Ventas</NavLink>
-                <NavLink to="/sales/history">Historial de Ventas</NavLink>
+                <NavLink to="/history">Historial de Ventas</NavLink>
                 <NavLink to="/reports">Reportes</NavLink>
                 <NavLink to="/settings">Configuración</NavLink>
                 <button onClick={handleLogout}>Cerrar Sesión</button>

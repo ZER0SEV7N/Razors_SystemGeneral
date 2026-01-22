@@ -1,4 +1,4 @@
-//AdminVentasFrontend/src/pages/Products.tsx
+//AdminVentasFrontend/src/pages/products/ProductsPage.tsx
 /*--------------------------------------------------------------------
     Pagina principal para gestion de productos
     - Principales funcionalidades:
@@ -8,12 +8,11 @@
 --------------------------------------------------------------------*/
 import { useEffect, useState } from "react"; //Importar useEffect y useState para manejar el estado y ciclo de vida del componente
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
-import ProductsTable from "./ProductsTable"; //Importar el componente ProductsTable
-import ProductForm from "./ProductForm"; //Importar el componente ProductForm
-import ProductFilters from "./ProductFilters"; //Importar el componente ProductFilters
+import ProductsTable from "../products/ProductsTable"; //Importar el componente ProductsTable
+import ProductForm from "../products/ProductForm"; //Importar el componente ProductForm
+import ProductFilters from "../products/ProductFilters"; //Importar el componente ProductFilters
 import Modal from "../../components/ui/ModalExample"; //Importar el componente ModalExample
 import type { Product } from "../../types"; //Importar la interfaz Product desde los tipos globales
-import "../css/products.css"; //Importar estilos CSS para la pagina de productos
 
 //Funcion componente para la pagina de productos
 const ProductsPage = () => {
@@ -58,9 +57,9 @@ const ProductsPage = () => {
   //Renderizar la pagina de productos
   -------------------------------------------------------------------*/
   return (
-    <div className="products-page">
+    <div className="page-container">
       {/*------- Cabecera ---------*/}
-      <header className="header-actions">
+      <header className="page-header">
         <h2>Inventario</h2>
         <button className="btn-primary" onClick={() => { setEditingProduct(undefined); setShowForm(true); }}>
           + Nuevo Producto
@@ -68,7 +67,11 @@ const ProductsPage = () => {
       </header>{/*------- Tabla de productos ---------*/}
       {/*------- Filtros de productos ---------*/}
       <ProductFilters filters={filters} onChange={setFilters} />
-      {loading ? <div className="loading-indicator">Cargando productos...</div> : (
+      {loading ? (
+        <div className="text-center" style={{ padding: '20px', color: 'var(--text-muted)' }}>
+            Cargando productos...
+        </div>
+      ) : (
         
         <ProductsTable
           products={products}

@@ -9,7 +9,7 @@
 import { useState, useEffect } from "react"; //Importar useState y useEffect para manejar el estado y ciclo de vida del componente
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
 import CategoriesModal from "../../components/ui/CategoriesModal";
-import "../css/products.css"; //Importar estilos CSS para la pagina de productos
+// import "../css/products.css"; // ELIMINADO
 import type { Category } from "../../types";
 
 //Definir la interfaz 
@@ -110,70 +110,87 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
     };
 
   return (
-    <div className="product-form">
+    <div>
     {/* Input de Nombre */}
-      <input 
-        name="name" 
-        value={form.name} 
-        onChange={handleChange} 
-        placeholder="Nombre del producto" 
-      />
+      <div className="form-group">
+        <input 
+            name="name" 
+            value={form.name} 
+            onChange={handleChange} 
+            placeholder="Nombre del producto" 
+            className="input-field"
+        />
+      </div>
       
       {/* Textarea de Descripción */}
-      <textarea 
-        name="description" 
-        placeholder="Descripción" 
-        value={form.description} 
-        onChange={handleChange} 
-      />
+      <div className="form-group">
+        <textarea 
+            name="description" 
+            placeholder="Descripción" 
+            value={form.description} 
+            onChange={handleChange} 
+            className="input-field"
+        />
+      </div>
 
       {/* Fila: Categoría + Botón */}
-      <div className="form-row">
-        <select 
-            name="category_id" 
-            value={form.category_id} 
-            onChange={handleChange}
-            className="flex-grow" // Clase auxiliar para que ocupe espacio
-        >
-          <option value="">Seleccione una categoría</option>
-          {categories.map((cat) => (
-            <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
-          ))}
-        </select>
-        <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>
-          + Cat
-        </button>
+      <div className="form-group">
+        <div style={{ display: 'flex', gap: '10px' }}>
+            <select 
+                name="category_id" 
+                value={form.category_id} 
+                onChange={handleChange}
+                className="input-field"
+            >
+            <option value="">Seleccione una categoría</option>
+            {categories.map((cat) => (
+                <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
+            ))}
+            </select>
+            <button type="button" className="btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ whiteSpace: 'nowrap' }}>
+            + Cat
+            </button>
+        </div>
       </div>
 
       {/* Fila: Precio + Stock */}
       <div className="form-row">
-        <input 
-            name="price" 
-            type="number" 
-            placeholder="Precio S/." 
-            value={form.price} 
-            onChange={handleChange} 
-        />
-        <input 
-            name="stock" 
-            type="number" 
-            placeholder="Stock" 
-            value={form.stock} 
-            onChange={handleChange} 
-        />
+        <div className="form-group">
+            <input 
+                name="price" 
+                type="number" 
+                placeholder="Precio S/." 
+                value={form.price} 
+                onChange={handleChange} 
+                className="input-field"
+            />
+        </div>
+        <div className="form-group">
+            <input 
+                name="stock" 
+                type="number" 
+                placeholder="Stock" 
+                value={form.stock} 
+                onChange={handleChange} 
+                className="input-field"
+            />
+        </div>
       </div>
       
-      <input 
-        name="min_stock" 
-        type="number" 
-        placeholder="Stock mínimo (Alerta)" 
-        value={form.min_stock} 
-        onChange={handleChange} 
-      />
+      <div className="form-group">
+        <input 
+            name="min_stock" 
+            type="number" 
+            placeholder="Stock mínimo (Alerta)" 
+            value={form.min_stock} 
+            onChange={handleChange} 
+            className="input-field"
+        />
+      </div>
 
       {/* Input de Imagen */}
-      <div className="file-input-container">
-        <label>Imagen del Producto:</label>
+      <div className="form-group" style={{ border: '2px dashed var(--border)', padding: '15px', borderRadius: 'var(--radius)', textAlign: 'center' }}>
+        <label style={{ cursor: 'pointer', display: 'block' }}>Imagen del Producto:</label>
         <input 
           type="file" 
           accept="image/*"
@@ -182,11 +199,12 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
               setImage(e.target.files[0]);
             }
           }} 
+          style={{ width: 'auto', marginTop: '10px' }}
         />
       </div>
 
       {/* Botones de acción */}
-      <div className="form-actions">
+      <div className="modal-footer">
           <button 
             type="button" 
             onClick={onCancel}

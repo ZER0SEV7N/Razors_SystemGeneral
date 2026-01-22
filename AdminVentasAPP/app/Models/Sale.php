@@ -16,6 +16,8 @@ class Sale extends Model
         'sale_date',
         'total',
         'status', //PENDIENTE, PAGADO, CANCELADO, ERROR
+        'payment_method', //EFECTIVO, TARJETA, TRANSFERENCIA
+        'payment_reference', //Referencia del pago (número de transacción, etc.)
     ];
     //Castear la fecha de venta a objeto DateTime
     protected $casts = [
@@ -31,7 +33,7 @@ class Sale extends Model
     //Relacion con el cliente (clients)
     public function client()
     {
-        return $this->belongsTo(Client::class, 'client_id', 'client_id'); //Una venta pertenece a un cliente
+        return $this->belongsTo(Client::class, 'client_id', 'client_id')->withTrashed(); //Una venta pertenece a un cliente
     }
 
     //Relacion con el usuario (users)

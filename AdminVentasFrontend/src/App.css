@@ -1,9 +1,49 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* VARIABLES GLOBALES */
+:root {
+  /* Paleta de Colores (Slate & Blue) */
+  --primary: #3b82f6;       /* Blue 500 */
+  --primary-hover: #2563eb; /* Blue 600 */
+  --secondary: #64748b;     /* Slate 500 */
+  --background: #f1f5f9;    /* Slate 100 */
+  --surface: #ffffff;       /* White */
+  
+  /* Estados */
+  --success: #22c55e;       /* Green 500 */
+  --danger: #ef4444;        /* Red 500 */
+  --warning: #f59e0b;       /* Amber 500 */
+  
+  /* Textos y Bordes */
+  --text-main: #1e293b;     /* Slate 800 */
+  --text-muted: #94a3b8;    /* Slate 400 */
+  --border: #e2e8f0;        /* Slate 200 */
+  
+  /* UI */
+  --radius: 8px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
 }
+
+/* RESET */
+* { box-sizing: border-box; }
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Helpers de Texto */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-bold { font-weight: bold; }
+.text-muted { color: var(--text-muted); }
+.text-green { color: var(--success); }
+.text-red { color: var(--danger); }
 
 .logo {
   height: 6em;

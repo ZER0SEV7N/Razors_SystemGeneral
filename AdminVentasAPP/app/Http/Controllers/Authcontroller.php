@@ -10,7 +10,13 @@ class AuthController extends Controller
     //Función para manejar el registro de nuevos usuarios
     public function register(Request $request)
     {
-        $request->headers->set('Accept', 'application/json');
+        //SEGURIDAD: Verificar si ya existe algún usuario
+        if (User::count() > 0) {
+            return response()->json([
+                'message' => 'El sistema ya tiene un administrador. El registro público está deshabilitado.'
+            ], 403);
+        }
+        
         //Validar los datos de entrada
         $validatedData = $request->validate([
             'name' => 'required|string|max:255', //nombre del usuario
@@ -26,6 +32,7 @@ class AuthController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'phone' => $validatedData['phone'] ?? null,
+            'role' => 'ADMIN' //Asignar rol de administrador por defecto
         ]);
         #Generar el tokem
         $token = $user->createToken('auth_token')->plainTextToken;

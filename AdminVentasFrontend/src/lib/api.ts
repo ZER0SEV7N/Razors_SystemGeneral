@@ -22,9 +22,14 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-            window.location.href = "/login";
+            // SOLUCIÓN: Verificamos si NO estamos ya en el login antes de redirigir.
+            // Si ya estamos en /login, dejamos que el componente Login maneje el error (muestre el mensaje).
+            if (window.location.pathname !== "/login") {
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+            }
         }
         return Promise.reject(error);
-    });
+    }
+);
 export default api; //Exportar la instancia de axios para su uso en otras partes de la aplicación

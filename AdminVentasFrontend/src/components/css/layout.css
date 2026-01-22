@@ -1,144 +1,128 @@
-/* src/components/css/layout.css */
-
-/* 1. RESET BÁSICO */
-* {
-    box-sizing: border-box;
+/* =========================================
+   1. ESTRUCTURA PRINCIPAL (FLEXBOX)
+   ========================================= */
+.layout { 
+  display: flex; 
+  height: 100vh; /* Ocupa el 100% de la altura de la ventana */
+  overflow: hidden; /* Evita scroll doble en el body */
+  width: 100vw; 
 }
 
-body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.layout-content { 
+  flex: 1; /* Ocupa todo el ancho restante después del sidebar */
+  display: flex; 
+  flex-direction: column; 
+  background-color: var(--background); 
+  min-width: 0; /* Truco para evitar desbordes en flex items */
 }
 
-/* 2. CONTENEDOR PRINCIPAL (Flexbox) */
-.layout {
-    display: flex;
-    height: 100vh; /* Ocupa toda la altura de la pantalla */
-    overflow: hidden; /* Evita scroll en el body principal */
+.main-content { 
+  flex: 1; /* Ocupa la altura restante debajo del navbar */
+  overflow-y: auto; /* Scroll independiente para el contenido */
+  position: relative; 
+  padding: 0; 
 }
 
-/* 3. SIDEBAR (Lateral Izquierdo) */
+/* =========================================
+   2. NAVBAR (BARRA SUPERIOR)
+   ========================================= */
+.navbar {
+  height: 64px; 
+  background-color: #000; 
+  border-bottom: 1px solid var(--border);
+  display: flex; 
+  align-items: center; 
+  padding: 0 24px; 
+  color: white; 
+  flex-shrink: 0; /* Evita que se aplaste si falta espacio */
+}
+
+.navbar h3 { 
+  margin: 0; 
+  color: var(--primary); 
+  font-size: 1.2rem; 
+}
+
+/* =========================================
+   3. SIDEBAR (BARRA LATERAL)
+   ========================================= */
 .sidebar {
-    width: 260px; /* Ancho fijo */
-    background-color: #1e293b; /* Color oscuro (Slate-800) */
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0; /* Evita que se encoja */
-    transition: width 0.3s ease;
+  width: 260px; /* Ancho fijo */
+  background-color: #1e293b; /* Color Slate-800 (Oscuro) */
+  color: #fff; 
+  display: flex; 
+  flex-direction: column; 
+  flex-shrink: 0; 
+  transition: width 0.3s; /* Animación suave si quisieras colapsarlo */
 }
 
-/* Sección de Usuario en Sidebar */
-.sidebar-user {
-    padding: 20px;
-    border-bottom: 1px solid #334155;
-    text-align: center;
+/* Perfil de Usuario en Sidebar */
+.sidebar-user { 
+  padding: 20px; 
+  border-bottom: 1px solid #334155; 
+  text-align: center; 
 }
 
-.sidebar-user img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #3b82f6; /* Borde azul */
-    margin-bottom: 10px;
+.sidebar-user img { 
+  width: 80px; 
+  height: 80px; 
+  border-radius: 50%; 
+  border: 3px solid var(--primary); 
+  margin-bottom: 10px; 
+  object-fit: cover; 
 }
 
-.sidebar-user h4 {
-    margin: 5px 0;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.sidebar-user small {
-    color: #94a3b8; /* Gris claro */
-    font-size: 12px;
-}
+.sidebar-user h4 { margin: 5px 0; font-weight: 600; font-size: 1rem; }
+.sidebar-user small { color: var(--text-muted); font-size: 0.8rem; }
 
 /* Menú de Navegación */
-.sidebar-menu {
-    flex: 1; /* Ocupa el espacio restante */
-    display: flex;
-    flex-direction: column;
-    padding: 20px 10px;
-    gap: 5px;
-    overflow-y: auto; /* Scroll si el menú es muy largo */
+.sidebar-menu { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  padding: 20px 10px; 
+  gap: 5px; 
+  overflow-y: auto; 
 }
 
 /* Enlaces del Menú */
-.sidebar-menu a {
-    text-decoration: none;
-    color: #cbd5e1;
-    padding: 12px 15px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    font-size: 14px;
+.sidebar-menu a { 
+  text-decoration: none; 
+  color: #cbd5e1; 
+  padding: 12px 15px; 
+  border-radius: var(--radius); 
+  transition: all 0.2s; 
+  display: flex; 
+  align-items: center; 
+  font-size: 14px; 
 }
 
-.sidebar-menu a:hover {
-    background-color: #334155;
-    color: white;
-    padding-left: 20px; /* Pequeño efecto de movimiento */
+.sidebar-menu a:hover { 
+  background-color: #334155; 
+  color: white; 
+  padding-left: 20px; /* Efecto de movimiento al hacer hover */
 }
 
-/* Clase automática que React Router agrega al link activo */
-.sidebar-menu a.active {
-    background-color: #3b82f6; /* Azul primario */
-    color: white;
-    font-weight: 600;
+.sidebar-menu a.active { 
+  background-color: var(--primary); 
+  color: white; 
+  font-weight: 600; 
 }
 
-/* Botón de Cerrar Sesión (dentro del menú) */
+/* Botón de Cerrar Sesión */
 .sidebar-menu button {
-    margin-top: auto; /* Empuja el botón al final si hay espacio */
-    background: transparent;
-    border: 1px solid #ef4444;
-    color: #ef4444;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
-    width: 100%;
+  margin-top: auto; /* Empuja el botón al final del contenedor */
+  background: transparent; 
+  border: 1px solid var(--danger); 
+  color: var(--danger);
+  padding: 10px; 
+  border-radius: var(--radius); 
+  cursor: pointer; 
+  transition: 0.2s; 
+  width: 100%;
 }
 
-.sidebar-menu button:hover {
-    background: #ef4444;
-    color: white;
-}
-
-/* 4. CONTENIDO DERECHO (Navbar + Main) */
-.layout-content {
-    flex: 1; /* Ocupa todo el ancho restante */
-    display: flex;
-    flex-direction: column;
-    background-color: #f1f5f9; /* Fondo gris claro para el contenido */
-}
-
-/* NAVBAR */
-.navbar {
-    height: 64px;
-    background-color: rgb(0, 0, 0);
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    padding: 0 24px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.navbar h3 {
-    margin: 0;
-    color: #1a64db;
-    font-size: 1.2rem;
-}
-
-/* MAIN CONTENT (Donde se renderizan las páginas) */
-.main-content {
-    flex: 1; /* Ocupa la altura restante debajo del navbar */
-    overflow-y: auto; /* IMPORTANTE: Permite scroll solo aquí */
-    padding: 0; /* Quitamos padding aquí para que el Dashboard controle el suyo */
-    position: relative;
+.sidebar-menu button:hover { 
+  background: var(--danger); 
+  color: white; 
 }

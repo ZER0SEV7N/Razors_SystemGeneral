@@ -113,8 +113,8 @@ class ProductController extends Controller
 
             //(opcional) borrar imagen anterior
             if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
+                    Storage::disk('public')->delete($product->image);
+                }
 
             $data['image'] = $request->file('image')->store('products', 'public');
         }

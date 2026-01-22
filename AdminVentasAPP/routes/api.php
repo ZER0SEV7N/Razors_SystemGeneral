@@ -5,8 +5,14 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\DespathGuideController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CompanySettingController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*-------------------------------------------------------
@@ -15,66 +21,86 @@ use Illuminate\Support\Facades\Route;
 
 //Ruta para el login de usuarios
 Route::post('/login', [AuthController::class, 'login']);
-//Ruta para el registro de nuevos usuarios
+//Ruta para el registro de nuevos usuarios [solo si no hay usuarios registrados, Al crear el primero se deshabilita esta ruta]
+//El primer usuario registrado sera el ADMIN del sistema
 Route::post('/register', [AuthController::class, 'register']);
 
 //Rutas protegidas que requieren autenticacion
 Route::middleware('auth:sanctum')->group(function () {
 
-    /*-------------------------------------------------------
-    ---- RUTAS PARA el usuario ------------------------------
-    --------------------------------------------------------*/
+    //==========================================================
+    //NIVEL 1: ACCESO COMÚN (Vendedores, Gerentes, Admins)
+    //==========================================================
 
-    //Ruta para obtener el perfil del usuario autenticado
-    Route::get('/me', [AuthController::class, 'profile']); //http://localhost:8000/api/me
-    //Ruta para cerrar sesion del usuario autenticado
-    Route::post('/logout', [AuthController::class, 'logout']); //http://localhost:8000/api/logout 
+    //Perfil Personal
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/profile', [ProfileController::class, 'update']); //Actualizar datos y foto
 
-    /*-------------------------------------------------------
-    ---- RUTA PARA DASHBOARD ------------------------------
-    --------------------------------------------------------*/
-    //Ruta para obtener las estadisticas del dashboard
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']); //http://localhost:8000/api/dashboard/stats
-
-    /*-------------------------------------------------------
-    ---- RUTAS PARA PRODUCTOS ------------------------------
-    --------------------------------------------------------*/
-
-    //Ruta para eliminar un producto de forma permanente <-- hard delete -->
-    Route::delete('/products/{product}/force', [ProductController::class, 'delete']); //http://localhost:8000/api/products/{product}/force
-    //Ruta para obtener productos inactivos
-    Route::get('/products-inactive', [ProductController::class, 'inactive']); //http://localhost:8000/api/products-inactive
-    //Ruta para reactivar un producto inactivo
-    Route::put('/products/{product}/reactivate', [ProductController::class, 'reactivate']); //http://localhost:8000/api/products/{product}/reactivate
-    //Ruta para buscar productos por nombre
-    Route::get('/products/search/{name}', [ProductController::class, 'searchByName']); //http://localhost:8000/api/products/search/{name}
-    //Rutas CRUD para la gestion de productos
-    Route::apiResource('products', ProductController::class); //http://localhost:8000/api/products
-
+    //Ventas (Punto de Venta)
+    Route::get('/sales', [SaleController::class, 'index']);      //Historial
+    Route::get('/sales/{id}', [SaleController::class, 'show']);  //Detalle
+    Route::post('/sales', [SaleController::class, 'store']);     //Registrar Venta (Nace PENDIENTE)
     
-    /*-------------------------------------------------------
-    ---- RUTAS PARA CATEGORIAS ------------------------------
-    --------------------------------------------------------*/
+    //Reportes Básicos (Boleta/Factura individual para entregar al cliente)
+    Route::get('/reports/sales/{id}', [ReportController::class, 'saleInvoice']);
 
-    //Rutas CRUD para la gestion de categorias
-    Route::apiResource('categories', CategoryController::class); //http://localhost:8000/api/categories
+    //Clientes (Necesario para vender)
+    Route::apiResource('clients', ClientController::class);
 
-    /*-------------------------------------------------------
-    ---- RUTAS PARA VENTAS ------------------------------
-    --------------------------------------------------------*/
+    //Consulta de Inventario (Solo lectura para poder vender)
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/{id}', [ProductController::class, 'show']);
+    Route::get('/categories', [CategoryController::class, 'index']);
+
+    //Consultar las guias de remision
+    Route::get('/guides/{id}', [DespathGuideController::class, 'show']); //Ver datos
+    Route::get('/guides/{id}/pdf', [DespathGuideController::class, 'pdf']); //Descargar PDF
     
-    //Rutas CRUD para la gestion de ventas
-    Route::apiResource('sales', SaleController::class)->only(['index', 'store', 'show', 'cancel']); //http://localhost:8000/api/sales
-    //Rutas CRUD para la gestion de clientes
-    Route::apiResource('clients', ClientController::class); //http://localhost:8000/api/clients
-    
-    /*-------------------------------------------------------
-    ---- RUTAS PARA REPORTES ------------------------------
-    --------------------------------------------------------*/
-    Route::controller(App\Http\Controllers\ReportController::class)->group(function () {
-        // 1. Factura Individual (ej: /reports/sales/10)
-        Route::get('/reports/sales/{id}', 'saleInvoice');
-        // 2. Reporte Mensual (ej: /reports/monthly?month=1&year=2026) 
-        Route::get('/reports/monthly', 'monthlySales');
+    //==========================================================
+    //NIVEL 2: SUPERVISIÓN (ADMIN y GERENTE)
+    //==========================================================
+    Route::middleware(['role:ADMIN,GERENTE'])->group(function () {
+        
+        //Gestión de Productos (Crear, Editar, Desactivar)
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{id}', [ProductController::class, 'update']);  //Edición normal
+        Route::post('/products/{id}', [ProductController::class, 'update']); //Fix para subir imagen en edición
+        Route::patch('/products/{id}/reactivate', [ProductController::class, 'reactivate']);
+        Route::delete('/products/{id}', [ProductController::class, 'destroy']); //Soft delete (Desactivar)
+
+        //Gestión de Categorías
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::put('/categories/{id}', [CategoryController::class, 'update']);
+        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+
+        //Aprobación de Ventas (Confirmar pago o Anular)
+        Route::put('/sales/{id}', [SaleController::class, 'update']);
+        
+        //Gestión de Guías de Despacho
+        Route::post('/guides', [DespathGuideController::class, 'store']); //Crear guía desde venta
+
+    });
+
+    //==========================================================
+    //NIVEL 3: SOLO DUEÑO (ADMIN)
+    //==========================================================
+    Route::middleware(['role:ADMIN'])->group(function () {
+        
+        //Gestión de Usuarios (Crear nuevos Vendedores/Gerentes)
+        Route::apiResource('users', UserController::class);
+
+        //Configuración Global (Logo, Nombre Empresa)
+        Route::get('/settings/company', [CompanySettingController::class, 'index']);
+        Route::post('/settings/company', [CompanySettingController::class, 'update']);
+
+        //Datos Financieros y Reportes Globales
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+        Route::get('/reports/monthly', [ReportController::class, 'monthlySales']);
+        
+        //Eliminación física (Solo Admin debería tener este poder destructivo)
+        Route::delete('/products/{product}/force', [ProductController::class, 'delete']);
+
+        //Gestión de Sedes (Sucursales)
+        Route::apiResource('branches', BranchController::class);
     });
 });

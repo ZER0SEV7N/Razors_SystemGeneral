@@ -5,10 +5,10 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory; //usar HasFactory si es necesario
 use Illuminate\Database\Eloquent\Model; //importar la clase Model
-
+use Illuminate\Database\Eloquent\SoftDeletes; 
 class Client extends Model
 {
-    use HasFactory; //usar el trait HasFactory si es necesario
+    use HasFactory, SoftDeletes; //usar el HasFactory y SoftDeletes si es necesario
     protected $primaryKey = 'client_id'; //Definir la llave primaria
 
     protected $fillable = [

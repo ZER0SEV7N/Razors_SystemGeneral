@@ -25,8 +25,8 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
   
   //Renderizado del componente
   return (
-    <div className="table-responsive">
-      <table className="products-table">
+    <div className="table-container">
+      <table className="data-table">
         <thead>
             <tr>
             <th style={{ width: '60px' }}>Imagen</th>
@@ -40,25 +40,27 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
         </thead>
         <tbody>
           {products.map((p) => (
-            <tr key={p.product_id} className={p.stock <= p.min_stock ? "low-stock-row" : ""}>
+            <tr key={p.product_id} style={{ backgroundColor: p.stock <= p.min_stock ? '#fff1f2' : undefined }}>
               <td>
                 <img 
                   src={getImageUrl(p.image)} 
                   alt={p.name}
                   onError={(e) => { e.currentTarget.src = "https://placehold.co/50x50?text=IMG"; }}
-                  className="product-img"
+                  style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--border)' }}
                 />
               </td>
               
               {/*2. NOMBRE*/}
               <td>
-                <div className="product-name">{p.name}</div>
-                <div className="product-desc">{p.description?.substring(0, 40) || 'Sin descripción'}...</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{p.name}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.description?.substring(0, 40) || 'Sin descripción'}...</div>
               </td>
 
               {/*3. CATEGORÍA */}
               <td>
-                <span className="category-tag">{p.category?.name || "Sin Categoría"}</span>
+                <span style={{ background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 500 }}>
+                    {p.category?.name || "Sin Categoría"}
+                </span>
               </td>
 
               {/*4. PRECIO */}
@@ -66,7 +68,7 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
 
               {/*5. STOCK */}
               <td>
-                <span style={{ color: p.stock <= p.min_stock ? 'red' : 'inherit', fontWeight: 'bold' }}>
+                <span style={{ color: p.stock <= p.min_stock ? 'var(--danger)' : 'inherit', fontWeight: 'bold' }}>
                   {p.stock}
                 </span>
               </td>
@@ -79,13 +81,13 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
               </td>
 
               {/*7. ACCIONES */}
-              <td className="actions-cell">
-                <div className="action-buttons">
-                  <button className="btn-icon edit" onClick={() => onEdit(p)} title="Editar">✏️</button>
+              <td style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '5px' }}>
+                  <button className="btn-icon" onClick={() => onEdit(p)} title="Editar">✏️</button>
                     {p.is_active ? (
-                      <button className="btn-icon delete" onClick={() => onDeactivate(p.product_id)} title="Desactivar">🗑️</button>
+                      <button className="btn-icon" onClick={() => onDeactivate(p.product_id)} title="Desactivar" style={{ color: 'var(--danger)' }}>🗑️</button>
                     ) : (
-                      onActivate && <button className="btn-icon restore" onClick={() => onActivate(p.product_id)} title="Reactivar">♻️</button>
+                      onActivate && <button className="btn-icon" onClick={() => onActivate(p.product_id)} title="Reactivar" style={{ color: 'var(--success)' }}>♻️</button>
                     )}
                 </div>
               </td>

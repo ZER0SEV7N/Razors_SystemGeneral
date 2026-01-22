@@ -2,11 +2,12 @@
 //Razors_SystemGeneral/AdminVentasAPP/app/Models/User.php
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -26,6 +27,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'avatar',
     ];
 
     /**
@@ -37,7 +39,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
-
+    
     /**
      * Get the attributes that should be cast.
      *
@@ -56,4 +58,24 @@ class User extends Authenticatable
         return $this->hasMany(Product::class, 'user_id', 'user_id');
     }
 
+    //--Evento para eliminar el avatar del usuario al ser eliminado--
+    protected static function booted()
+    {
+        //Al eliminar un usuario, borrar su avatar si existe
+        static::deleting(function ($user){
+            if($user->avatar){
+                Storage::delete($user->avatar);
+            }
+        });
+
+        //Al actualizar un usuario, si se cambia el avatar, borrar el anterior
+        static::updating(function ($user){
+            if($user->isDirty('avatar')){
+                $original = $user->getOriginal('avatar');
+                if($original){
+                    Storage::disk('public')->delete($original);
+                }
+            }
+        });
+    }
 }
