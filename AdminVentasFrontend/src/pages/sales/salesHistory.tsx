@@ -35,6 +35,23 @@ const SalesHistory = () => {
         };
     };
 
+    // --- NUEVA FUNCIÓN: APROBAR VENTA ---
+    const handleApproveSale = async (id: number) => {
+        if (!confirm("💰 ¿Confirmar que se recibió el pago?\nLa venta pasará a estado PAGADO.")) return;
+
+        try {
+            // Enviamos status: 'PAGADO' al método update del controlador
+            await api.put(`/sales/${id}`, { status: 'PAGADO' });
+            alert("✅ Venta APROBADA exitosamente.");
+            fetchSales(); // Recargamos la tabla para ver el cambio
+        } catch (err: any) {
+            console.error("Error al aprobar:", err);
+            // Si el backend devuelve error (ej: no eres Admin), lo mostramos
+            const msg = err.response?.data?.message || "Error al aprobar la venta.";
+            alert("❌ " + msg);
+        }
+    };
+
     //Funcion para anular las Ventas (Devuelve el Stock)
     const handleCancelSale = async (id: number) => {
         if (!confirm("⚠️ ¿Estás seguro de ANULAR esta venta?\nEl stock será devuelto al inventario.")) return;
@@ -68,6 +85,18 @@ const SalesHistory = () => {
         } catch (err) {
             console.error("Error al generar el PDF de la venta.", err);
             alert("❌ Error al generar el PDF de la venta.");
+        }
+    };
+
+    const handleInventoryReport = async () => {
+        try {
+            const res = await api.get("/reports/inventory", {
+                responseType: 'blob'
+            });
+            const pdfUrl = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            window.open(pdfUrl, '_blank');
+        } catch (err) {
+            alert("❌ Error al generar el reporte de inventario.");
         }
     };
 
@@ -106,6 +135,8 @@ const SalesHistory = () => {
                     <button onClick={fetchSales} className="btn-refresh">
                         🔄 Actualizar
                     </button>
+                    
+                    <button onClick={handleInventoryReport}>📥 Descargar Inventario PDF</button>
                 </div>
             </div>
 
@@ -143,6 +174,14 @@ const SalesHistory = () => {
                                     </td>
                                     <td className="text-center">
                                         <div className="action-buttons">
+                                            {/* 1. Botón APROBAR (Solo si está PENDIENTE) */}
+                                            {sale.status === 'PENDIENTE' && (
+                                                <button 
+                                                    onClick={() => handleApproveSale(sale.sale_id)}
+                                                    className="btn-icon"
+                                                    style={{color: '#10b981', background: '#ecfdf5', marginRight: 5}}
+                                                    title="Aprobar Pago">✅</button>
+                                            )}
                                             <button 
                                                 onClick={() => setSelectedSale(sale)}
                                                 className="btn-icon"

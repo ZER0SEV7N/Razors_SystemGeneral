@@ -1,95 +1,68 @@
-//adminventasfrontend/src/pages/settings/settingspage.tsx
-/*--------------------------------------------------------------------
-    Página de Configuración de la Compañía
+//AdminVentasFrontend/src/pages/settings/settingspage.tsx
+//--------------------------------------------------------------------
+/*    Página de Configuración del Sistema
     - Principales funcionalidades:
-        - Mostrar y actualizar la información de configuración de la compañía
-        - Integración con la API para obtener y guardar datos
-        - Modificar logo de la compañía
-        - Modificar nombre, dirección y teléfono
+        - Navegación entre pestañas de configuración
+        - Acceso a configuración de perfil, empresa, sucursales y conexión
 --------------------------------------------------------------------*/
-import { useState, useEffect } from "react";
-import api from "../../lib/api";
-import { API_URL } from "../../lib/config";
-import type { CompanySettings, User } from "../../types/index";
-import Modal from "../../components/ui/ModalExample";
+import { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import "../css/settings.css";
 
-//Componente principal de la página de configuración
+// Iconos
+import { User, Building, MapPin, Wifi } from "lucide-react";
+
+// TABS
+import ProfileTab from "./tabs/ProfileTab";   
+import CompanyTab from "./tabs/CompanyTab";   
+import BranchesTab from "./tabs/BranchTab"; 
+import ConnectionTab from "./tabs/ConnectionTab"; 
+
 const SettingsPage = () => {
-    //Estado para la configuración de la compañía
-    const [activeTab, setActiveTab] = useState<'profile' | 'company' | 'users'>('profile');
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState("profile");
+    const isAdmin = user?.role === "ADMIN";
 
-    //Cargar usuario actual al montar
-    useEffect(() => {
-        const stored = localStorage.getItem("user");
-        if(stored) setCurrentUser(JSON.parse(stored));
-    }, []);
-
-    const isAdmin = currentUser?.role === 'ADMIN';
     return (
         <div className="page-container">
-            <div className="page-header">
-                <h2>⚙️ Configuración</h2>
-            </div>
+            <header className="page-header">
+                <h2>Configuración del Sistema</h2>
+            </header>
 
-            {/* --- NAVEGACIÓN DE PESTAÑAS --- */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
-                <button 
-                    onClick={() => setActiveTab('profile')}
-                    style={activeTab === 'profile' ? tabActiveStyle : tabStyle}
-                >👤 Mi Perfil
-                </button>
-                
-                {/* Opciones solo para Admins */}
-                {isAdmin && (
-                    <>
-                        <button 
-                            onClick={() => setActiveTab('company')}
-                            style={activeTab === 'company' ? tabActiveStyle : tabStyle}
-                        >
-                            🏢 Empresa
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('users')}
-                            style={activeTab === 'users' ? tabActiveStyle : tabStyle}
-                        >
-                            👥 Usuarios
-                        </button>
-                    </>
-                )}
-            </div>
+            <div className="settings-layout">
+                {/* SIDEBAR */}
+                <aside className="settings-sidebar">
+                    <button className={`settings-nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+                        <User size={18} /> Mi Perfil
+                    </button>
 
-            {/* --- CONTENIDO DINÁMICO --- */}
-            <div className="tab-content">
-                {activeTab === 'profile' && <ProfileSettings user={currentUser} />}
-                {isAdmin && activeTab === 'company' && <CompanySettingsTab />}
-                {isAdmin && activeTab === 'users' && <UsersManagementTab />}
+                    {isAdmin && (
+                        <>
+                            <div style={{margin:'15px 0 5px 10px', fontSize:'0.75rem', color:'#94a3b8', fontWeight:'bold', textTransform:'uppercase'}}>Administración</div>
+                            <button className={`settings-nav-btn ${activeTab === 'company' ? 'active' : ''}`} onClick={() => setActiveTab('company')}>
+                                <Building size={18} /> Datos Empresa
+                            </button>
+                            <button className={`settings-nav-btn ${activeTab === 'branches' ? 'active' : ''}`} onClick={() => setActiveTab('branches')}>
+                                <MapPin size={18} /> Sucursales
+                            </button>
+                        </>
+                    )}
+
+                    <div style={{margin:'15px 0 5px 10px', fontSize:'0.75rem', color:'#94a3b8', fontWeight:'bold', textTransform:'uppercase'}}>Sistema</div>
+                    <button className={`settings-nav-btn ${activeTab === 'connection' ? 'active' : ''}`} onClick={() => setActiveTab('connection')}>
+                        <Wifi size={18} /> Conexión
+                    </button>
+                </aside>
+
+                {/* CONTENIDO */}
+                <main className="settings-content">
+                    {activeTab === 'profile' && <ProfileTab user={user}/>} {/* Pasa el user como prop si tu ProfileTab lo requiere */}
+                    {activeTab === 'company' && isAdmin && <CompanyTab />}
+                    {activeTab === 'branches' && isAdmin && <BranchesTab />}
+                    {activeTab === 'connection' && <ConnectionTab />}
+                </main>
             </div>
         </div>
     );
 };
-
-// --- ESTILOS DE TABS (Inline para no ensuciar CSS global) ---
-const tabStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '3px solid transparent',
-    cursor: 'pointer',
-    color: 'var(--text-muted)',
-    fontWeight: 600,
-    fontSize: '0.95rem'
-};
-
-const tabActiveStyle: React.CSSProperties = {
-    ...tabStyle,
-    color: 'var(--primary)',
-    borderBottom: '3px solid var(--primary)'
-};
-
-// ==========================================
-// SUB-COMPONENTE: MI PERFIL
-// ==========================================
-}
 export default SettingsPage;

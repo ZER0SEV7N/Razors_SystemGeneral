@@ -11,7 +11,12 @@ class CategoryController extends Controller
 {
     //Funcion para mostrar todas las categorias en formato JSON
     public function index(){
-        return response()->json(Category::where('is_active', true)->get());
+        //withCount' agrega un campo 'products_count' a cada objeto JSON
+        $categories = Category::withCount('products')
+            ->where('is_active', true) //Solo activas (opcional, según tu lógica)
+            ->get();
+
+        return response()->json($categories);
     }
 
     //Funcion para crear una nueva categoria
@@ -44,9 +49,18 @@ class CategoryController extends Controller
 
     //Funcion para eliminar una categoria específica
     public function destroy(Category $category){
-        $category->update(['is_active' => false]); //Marca la categoria como inactiva
+        //1. Verificamos si tiene productos asociados (incluso si la categoría está activa)
+        if ($category->products()->count() > 0) {
+            return response()->json([
+                'message' => 'No se puede eliminar la categoría porque tiene productos asociados.'
+            ], 409); 
+        }
+
+        //2. Si está limpia, procedemos a desactivar (Soft Delete lógico)
+        $category->update(['is_active' => false]);
+
         return response()->json([
-            'message' => 'Categoría desactivada' //Devuelve un mensaje de confirmación
+            'message' => 'Categoría desactivada correctamente'
         ]);
     }
 }

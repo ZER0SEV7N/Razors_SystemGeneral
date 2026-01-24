@@ -1,4 +1,4 @@
-//adminVentasFrontend/src/pages/settings/profileTab.tsx
+//adminVentasFrontend/src/pages/settings/ProfileTab.tsx
 /*--------------------------------------------------------------------
     Pestaña de Perfil de Usuario
     - Principales funcionalidades:
@@ -6,8 +6,8 @@
         - Integración con la API para obtener y guardar datos
 --------------------------------------------------------------------*/
 import { useState, useEffect } from "react";
-import api from "../../lib/api";
-import { API_URL } from "../../lib/config";
+import api from "../../../lib/api";
+import { API_URL } from "../../../lib/config";
 
 //==========================================
 // SUB-COMPONENTE: MI PERFIL

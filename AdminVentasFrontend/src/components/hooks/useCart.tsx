@@ -8,10 +8,10 @@
         - Calcular totales del carrito
 --------------------------------------------------------------------*/
 import { useState, useMemo } from "react"; //Importar useState para manejar el estado y useMemo para memorizar valores calculados
-import type { CarItem, Product } from "../../types"; //Importar las interfaces necesarias desde los tipos globales
+import type { CartItem, Product } from "../../types"; //Importar las interfaces necesarias desde los tipos globales
 
 export const useCart = () => {
-    const [cart, setCart] = useState<CarItem[]>([]); //Estado para almacenar los items del carrito
+    const [cart, setCart] = useState<CartItem[]>([]); //Estado para almacenar los items del carrito
 
     //Funcion para agregar un producto al carrito
     const addToCart = (product: Product) => {

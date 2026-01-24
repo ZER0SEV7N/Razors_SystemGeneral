@@ -8,8 +8,8 @@
 --------------------------------------------------------------------*/
 import { useState, useEffect } from "react"; //Importar useState y useEffect para manejar el estado y ciclo de vida del componente
 import api from "../../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
-import CategoriesModal from "../../components/ui/CategoriesModal";
-// import "../css/products.css"; // ELIMINADO
+import Modal from "../../components/ui/ModalExample";
+import CategoriesForm from "../categories/CategoriesForm";
 import type { Category } from "../../types";
 
 //Definir la interfaz 
@@ -41,8 +41,13 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
 
     //Cargar las categorías al montar el componente
     const fetchCategories = async () => {
-        const res = await api.get("/categories");
-        setCategories(res.data.filter((c: any) => c.is_active)); //Filtrar solo categorías activas
+        try {
+            const res = await api.get("/categories");
+            // Filtramos solo las activas para el select
+            setCategories(res.data.filter((c: any) => c.is_active)); 
+        } catch (error) {
+            console.error("Error cargando categorías", error);
+        }
     };
 
     //Usar useEffect para cargar las categorías al montar el componente
@@ -142,14 +147,21 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
                 onChange={handleChange}
                 className="input-field"
             >
-            <option value="">Seleccione una categoría</option>
-            {categories.map((cat) => (
+              <option value="">Seleccione una categoría</option>
+              {categories.map((cat) => (
                 <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
-            ))}
+              ))}
             </select>
-            <button type="button" className="btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ whiteSpace: 'nowrap' }}>
-            + Cat
-            </button>
+
+            <button 
+              type="button" 
+              className="btn-secondary" 
+              onClick={() => setShowCategoryModal(true)} 
+              style={{ whiteSpace: 'nowrap', minWidth: '60px' }}
+              title="Crear Nueva Categoría"
+            >
+              +
+          </button>
         </div>
       </div>
 
@@ -165,6 +177,8 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
                 className="input-field"
             />
         </div>
+
+        {/* Input de Stock */}
         <div className="form-group">
             <input 
                 name="stock" 
@@ -177,7 +191,9 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
         </div>
       </div>
       
+      {/* Input de Stock Mínimo */}
       <div className="form-group">
+        <label>Stock Mínimo (Alerta)</label>
         <input 
             name="min_stock" 
             type="number" 
@@ -187,10 +203,10 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
             className="input-field"
         />
       </div>
-
-      {/* Input de Imagen */}
-      <div className="form-group" style={{ border: '2px dashed var(--border)', padding: '15px', borderRadius: 'var(--radius)', textAlign: 'center' }}>
-        <label style={{ cursor: 'pointer', display: 'block' }}>Imagen del Producto:</label>
+      
+      {/* Input de Imagen Estilizado */}
+      <div className="form-group file-input-container">
+        <label>Imagen del Producto</label>
         <input 
           type="file" 
           accept="image/*"
@@ -199,8 +215,8 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
               setImage(e.target.files[0]);
             }
           }} 
-          style={{ width: 'auto', marginTop: '10px' }}
-        />
+          />
+        {image && <small style={{display:'block', marginTop:5, color:'green'}}>Imagen seleccionada: {image.name}</small>}
       </div>
 
       {/* Botones de acción */}
@@ -214,6 +230,7 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
           </button>
 
           <button 
+            type="button" 
             onClick={submitForm} 
             disabled={loading} 
             className="btn-primary"
@@ -222,14 +239,22 @@ const ProductForm = ({ product, onSuccess, onCancel }: Props) =>{
           </button>
       </div>
 
-      {showCategoryModal && (
-        <CategoriesModal
-          onClose={() => setShowCategoryModal(false)}
-          onCreated={fetchCategories}
-        />
-      )}
-    </div>
-  );
+      {/* --- MODAL PARA CREAR CATEGORÍA RÁPIDA --- */}
+        <Modal 
+            isOpen={showCategoryModal}
+            onClose={() => setShowCategoryModal(false)}
+            title="Nueva Categoría Rápida"
+        >
+            <CategoriesForm 
+              onSuccess={() => {
+                  setShowCategoryModal(false);
+                  fetchCategories(); // Recargamos la lista del select
+              }}
+              onCancel={() => setShowCategoryModal(false)}
+            />
+        </Modal>
+      </div>
+    );
 };
 
 export default ProductForm; //Exportar el componente ProductForm

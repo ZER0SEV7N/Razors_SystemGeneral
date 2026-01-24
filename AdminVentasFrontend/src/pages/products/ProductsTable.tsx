@@ -85,9 +85,16 @@ const ProductsTable = ({ products, onEdit, onDeactivate, onActivate }: Props) =>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '5px' }}>
                   <button className="btn-icon" onClick={() => onEdit(p)} title="Editar">✏️</button>
                     {p.is_active ? (
-                      <button className="btn-icon" onClick={() => onDeactivate(p.product_id)} title="Desactivar" style={{ color: 'var(--danger)' }}>🗑️</button>
+                      <button className="btn-icon" 
+                        onClick={() => onDeactivate(p.product_id)} 
+                        title="Desactivar" 
+                        style={{ color: 'var(--danger)' }}>🗑️</button>
                     ) : (
-                      onActivate && <button className="btn-icon" onClick={() => onActivate(p.product_id)} title="Reactivar" style={{ color: 'var(--success)' }}>♻️</button>
+                      onActivate && <button className="btn-icon" 
+                                      onClick={() => onActivate(p.product_id)} 
+                                      title="Reactivar" 
+                                      style={{ color: 'var(--success)' }}>♻️
+                                    </button>
                     )}
                 </div>
               </td>

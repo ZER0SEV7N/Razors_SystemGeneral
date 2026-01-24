@@ -15,12 +15,19 @@ class Branch extends Model
 
     protected $fillable = [
         'name',
+        'company_id',
         'address',
         'phone',
         'code',
         'is_main',
         'is_active',
     ]; //Campos que se pueden asignar masivamente
+
+    //Relación: Una sucursal pertenece a una Compañía
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id', 'company_id');
+    }
 
     //Relación con los Usuarios asignados a esta Sucursal
     public function users()

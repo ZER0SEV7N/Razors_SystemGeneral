@@ -1,0 +1,113 @@
+/* src/pages/css/categories.css */
+
+/* =========================================
+   1. LAYOUT DE PÁGINA
+   ========================================= */
+.categories-page {
+    padding: 24px;
+    background-color: var(--background); /* Usa tus variables globales */
+    min-height: 100vh;
+}
+
+.categories-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.categories-header h2 {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin: 0;
+}
+
+/* =========================================
+   2. TABLA DE CATEGORÍAS
+   ========================================= */
+.categories-table-container {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+}
+
+.categories-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.categories-table th {
+    background-color: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: left;
+    padding: 16px;
+    border-bottom: 2px solid var(--border);
+}
+
+.categories-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.categories-table tr:hover {
+    background-color: #f8fafc;
+}
+
+/* =========================================
+   3. ELEMENTOS ESPECÍFICOS DE CATEGORÍAS
+   ========================================= */
+
+/* Botón "Ver Productos" (Estilo píldora) */
+.btn-view-products {
+    background-color: #eff6ff;
+    color: var(--primary);
+    border: 1px solid #dbeafe;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-view-products:hover {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* =========================================
+   4. AJUSTES DEL FORMULARIO (.product-form)
+   ========================================= */
+/* Como CategoriesForm usa className="product-form",
+   nos aseguramos de que tenga estilos básicos por si 
+   products.css no está cargado.
+*/
+.product-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaciado entre inputs */
+}
+
+/* Ocultamos el H2 del formulario porque el Modal ya tiene título */
+.product-form h2 {
+    display: none; 
+}
+
+/* Ajuste para el footer del modal (alineación) */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+}

@@ -12,6 +12,9 @@ return new class extends Migration
     {
         Schema::create('branches', function (Blueprint $table) {
             $table->id('branch_id');
+            $table->foreignId('company_id')
+                  ->constrained('company', 'company_id')
+                  ->onDelete('cascade');
             $table->string('name'); // Ej: Sede Central
             $table->string('address'); // Dirección de la sede
             $table->string('phone')->nullable();

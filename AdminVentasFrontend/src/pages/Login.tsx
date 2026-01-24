@@ -10,10 +10,12 @@ import { useState } from "react"; //Importar useState para manejar el estado del
 import { useNavigate } from "react-router-dom"; //Importar useNavigate para la navegacion entre paginas
 import api from "../lib/api"; //Importar la instancia de axios configurada para realizar solicitudes a la API
 import "./css/Login.css"; //Importar estilos CSS para la pagina de login (Ajustado a ruta relativa estándar)
+import { useAuth } from "../context/AuthContext"; //Importar el contexto de autenticacion
 
 //Componente de Login
 const Login = () => {
     const navigate = useNavigate(); //Hook para la navegacion
+    const { login } = useAuth(); //Obtener el contexto de autenticacion
     const [email, setEmail] = useState(""); //Estado para el email del usuario
     const [password, setPassword] = useState(""); //Estado para la contraseña del usuario
     const [error, setError] = useState(""); //Estado para manejar errores de login
@@ -22,8 +24,7 @@ const Login = () => {
     //Funcion para el manejo del envio del formulario del Login
     //Utilizando la peticion HTTP/POST a la API
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault(); //Prevenir el comportamiento por defecto del formulario (Evita recarga)
-        
+        e.preventDefault(); //Prevenir el comportamiento por defecto del formulario (Evita recarga)      
         setLoading(true); //Indicar que se inicio el proceso de login
         setError(""); //Limpiar errores previos
 
@@ -42,11 +43,14 @@ const Login = () => {
             }
             console.log("LOGIN EXITOSO");
 
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
+            login(token, user);
             
-            //Redirigir al usuario a la pagina principal despues del login exitoso
-            navigate("/dashboard");
+            //Redirección inteligente según rol (Opcional pero recomendado)
+            if (user.role === 'VENDEDOR') {
+                navigate("/sales");
+            } else {
+                navigate("/dashboard");
+            }
 
         } catch (err: any) {  
             console.error("Error en login:", err);

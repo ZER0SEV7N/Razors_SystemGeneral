@@ -11,7 +11,7 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\DespathGuideController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\CompanySettingController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -90,13 +90,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
 
         //Configuración Global (Logo, Nombre Empresa)
-        Route::get('/settings/company', [CompanySettingController::class, 'index']);
-        Route::post('/settings/company', [CompanySettingController::class, 'update']);
+        Route::get('/company', [CompanyController::class, 'index']);
+        Route::match(['put', 'post'], '/company', [CompanyController::class, 'update']);
 
         //Datos Financieros y Reportes Globales
         Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
         Route::get('/reports/monthly', [ReportController::class, 'monthlySales']);
-        
+        // 🔥 AGREGA ESTA LÍNEA AQUÍ PARA EL INVENTARIO:
+        Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
+
+
         //Eliminación física (Solo Admin debería tener este poder destructivo)
         Route::delete('/products/{product}/force', [ProductController::class, 'delete']);
 

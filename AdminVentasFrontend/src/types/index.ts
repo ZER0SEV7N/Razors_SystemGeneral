@@ -6,12 +6,24 @@
         - Facilitar la tipificación en componentes y funciones
 --------------------------------------------------------------------*/
 
+//Interfaz para las sedes (branches)
+export interface Branch {
+    branch_id: number;
+    name: string;
+    address: string;
+    phone?: string;
+    code: string;
+    is_main: boolean;
+    company_id: number;
+}
+
 //Interfaz para una categoría
 export interface Category {
     category_id: number;
     name: string;
     description?: string;
     is_active: boolean;
+    products_count?: number;
 }
 
 //Interfaz para un usuario
@@ -22,6 +34,8 @@ export interface User {
     role: 'ADMIN' | 'VENDEDOR' | 'GERENTE'; // Tipado estricto para roles
     email: string;
     avatar?: string; //Campo opcional para la ruta del avatar
+    branch_id?: number;
+    branch?: Branch;
 }
 
 //Interfaz para configuracion de compañia
@@ -48,7 +62,7 @@ export interface Product {
 }
 
 //Interfaz para el carrito de compras
-export interface CarItem extends Product {
+export interface CartItem extends Product {
     quantity: number; //Cantidad del producto en el carrito
     subtotal: number; //Subtotal calculado (price * quantity)
 }
@@ -90,12 +104,25 @@ export interface SaleDetail {
 export interface Sale {
     sale_id: number;
     user_id: number;
+    branch_id: number;
     client_id: number | null;
     sale_date: string; // Las fechas suelen venir como string ISO desde Laravel
     total: number;
     status: 'PENDIENTE' | 'PAGADO' | 'CANCELADO'; // Tipado estricto para estados
+    // --- NUEVO: Datos de pago ---
+    payment_method: string; 
+    payment_reference?: string;
     // Relaciones
     user?: User;
     client?: Client;
     details: SaleDetail[];
+}
+
+export interface DashboardStats {
+    total_products: number;
+    low_stock_count: number;
+    total_categories: number;
+    sales_today?: number;
+    sales_month?: number;
+    inventory_value?: number;
 }

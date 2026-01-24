@@ -16,6 +16,9 @@ const SalesPage = () => {
      const [products, setProducts] = useState<Product[]>([]); //Estado para almacenar la lista de productos
      const [searchTerm, setSearchTerm] = useState<string>(""); //Estado para el término de búsqueda
      const [loadingPay, setLoadingPay] = useState<boolean>(false); //Estado para indicar si se está procesando el pago
+     // --- NUEVOS ESTADOS PARA TU CONTROLADOR ---
+    const [paymentMethod, setPaymentMethod] = useState<string>("EFECTIVO");
+    const [paymentRef, setPaymentRef] = useState<string>("");
 
     //2. Hook del Carrito (nuestra Lógica de Carrito personalizada)
     const { cart, addToCart, removeFromCart, decreaseQuantity, clearCart, total } = useCart();
@@ -30,7 +33,9 @@ const SalesPage = () => {
         try{
             //Traer productos desde la API
             const res = await api.get("/products"); //Realizar la petición GET a la API para obtener la lista de productos
-            setProducts(res.data.data || res.data); //Actualizar el estado con la lista de productos obtenida
+            // Ajuste por si tu API devuelve paginación o data directa
+            const lista = res.data.data ? res.data.data : res.data;
+            setProducts(lista);
         }catch(error){
             console.error("Error Cargando productos:", error);
         }
@@ -41,41 +46,54 @@ const SalesPage = () => {
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) && p.is_active
     );
 
-    //5. Función para procesar la venta
+    // --- FUNCIÓN ADAPTADA A TU BACKEND ---
     const handleSale = async () => {
         if (cart.length === 0) return;
+
+        // Validación simple de referencia si no es efectivo (opcional)
+        if (paymentMethod !== "EFECTIVO" && !paymentRef.trim()) {
+             if(!confirm("¿Deseas procesar el pago sin número de referencia?")) return;
+        }
+
         setLoadingPay(true);
 
-        //Preparar los datos para la venta
+        // Preparamos el payload EXACTO que pide tu SaleController::store
         const saleData = {
-            client_id: null, //Por ahora no manejamos clientes
+            client_id: null, // Por ahora null (Público General), luego puedes agregar selector de clientes
             products: cart.map(item => ({
                 product_id: item.product_id,
                 quantity: item.quantity
-            }))
+            })),
+            // Campos requeridos por tu validación:
+            payment_method: paymentMethod, 
+            payment_reference: paymentRef || null 
         };
 
         try{
-            //Enviar la venta a la API
-            await api.post("/sales", saleData); //Realizar la petición POST a la API para procesar la venta
-            alert("Venta procesada con éxito");
-            clearCart(); //Limpiar el carrito después de la venta
-            fetchProducts(); //Refrescar la lista de productos para actualizar stock
+            // Tu backend devuelve { message: '...', sale_id: ... }
+            const res = await api.post("/sales", saleData); 
+            
+            alert(`✅ Venta registrada con éxito. ID: ${res.data.sale_id}`);
+            
+            clearCart(); 
+            setPaymentRef(""); // Limpiar referencia
+            setPaymentMethod("EFECTIVO"); // Resetear método
+            fetchProducts(); // Refrescar stock visualmente
         }catch (error: any){
             console.error("Error procesando la venta:", error);
-            alert("❌ Error: " + (error.response?.data?.message || "Error al procesar venta"));        
+            // Mostrar error del backend (ej: "Stock insuficiente...")
+            const msg = error.response?.data?.message || "Error al procesar venta";
+            alert("❌ Error: " + msg);        
         }finally{
             setLoadingPay(false);
         }
     };
 
-    //Helper para obtener la URL completa de la imagen del producto
     const getImg = (path?: string) => path ? `http://localhost:8000/storage/${path}` : "https://placehold.co/100?text=IMG";
 
-    //Renderizado del componente
     return (
         <div className="sales-container">
-            {/* Izquierda - Catalogo */}
+            {/* --- IZQUIERDA: CATÁLOGO (Igual que antes) --- */}
             <div className="catalog-panel">
                 <div className="search-bar">
                     <input className="search-input"
@@ -101,11 +119,11 @@ const SalesPage = () => {
                 </div>
             </div>
 
-            {/* Derecha - Carrito de Compras */}
+            {/* --- DERECHA: CARRITO Y PAGO --- */}
             <div className="cart-panel">
                 <div className="cart-header">
                     <h3>Ticket de Venta</h3>
-                    <small>Cliente: Publico General</small>
+                    <small>Cliente: Público General</small>
                 </div>
 
                 <div className="cart-items">
@@ -121,7 +139,8 @@ const SalesPage = () => {
                                 <div className="item-controls">
                                     <button className="btn-qty" onClick={() => decreaseQuantity(item.product_id)}>-</button>
                                     <span>{item.quantity}</span>
-                                    <button className="btn-qty" onClick={() => addToCart(item)}>+</button>
+                                    {/* Validamos contra stock visualmente aunque el backend valida también */}
+                                    <button className="btn-qty" onClick={() => item.quantity < item.stock && addToCart(item)}>+</button>
                                     <button className="btn-remove" onClick={() => removeFromCart(item.product_id)}>🗑️</button>
                                 </div>
                             </div>
@@ -129,11 +148,42 @@ const SalesPage = () => {
                     )}
                 </div>
 
+                {/* --- SECCIÓN DE PAGO (NUEVO) --- */}
                 <div className="cart-footer">
+                    
+                    {/* Selector de Método de Pago */}
+                    <div style={{marginBottom: 15}}>
+                        <label style={{display:'block', fontSize:'0.85rem', fontWeight:600, color:'#64748b', marginBottom:5}}>Método de Pago:</label>
+                        <select 
+                            className="input-field" 
+                            style={{width:'100%', padding: 8}}
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                        >
+                            <option value="EFECTIVO">💵 Efectivo</option>
+                            <option value="TARJETA">💳 Tarjeta (Débito/Crédito)</option>
+                            <option value="TRANSFERENCIA">📲 Transferencia / Yape</option>
+                        </select>
+                    </div>
+
+                    {/* Input de Referencia (Solo si no es efectivo) */}
+                    {paymentMethod !== 'EFECTIVO' && (
+                        <div style={{marginBottom: 15}}>
+                            <input 
+                                className="input-field" 
+                                style={{width:'100%', padding: 8}}
+                                placeholder="Nro. Operación / Ref."
+                                value={paymentRef}
+                                onChange={(e) => setPaymentRef(e.target.value)}
+                            />
+                        </div>
+                    )}
+
                     <div className="total-row">
                         <span>TOTAL:</span>
                         <span>S/. {total.toFixed(2)}</span>
                     </div>
+
                     <button 
                         className="btn-pay" 
                         disabled={cart.length === 0 || loadingPay}
