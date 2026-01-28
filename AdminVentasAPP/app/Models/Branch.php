@@ -40,4 +40,12 @@ class Branch extends Model
     {
         return $this->hasMany(Sale::class, 'branch_id', 'branch_id');
     }
+
+    //Relación: Una sucursal tiene muchos productos
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'branch_product', 'branch_id', 'product_id')
+                    ->withPivot('stock')
+                    ->withTimestamps();
+    }
 }

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Sale; 
 use App\Models\SaleDetail;
 use App\Models\Client;
+use App\Models\Branch;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,8 +76,15 @@ class SaleController extends Controller
                     //Bloquear el producto para evitar condiciones de carrera
                     $product = Product::lockForUpdate()->find($item['product_id']);
 
+                    //1. Verificar si la sucursal del vendedor tiene este producto registrado
+                    //Buscamos en la tabla pivote
+                    $branchProduct = DB::table('branch_product')
+                        ->where('branch_id', $user->branch_id)
+                        ->where('product_id', $item['product_id'])
+                        ->first(); //Usamos first() para obtener el objeto o null
+
                     //Verificar stock
-                    if($product->stock < $item['quantity']){
+                    if (!$branchProduct || $branchProduct->stock < $item['quantity']) {
                         throw new \Exception("Stock insuficiente para el producto: {$product->name}");
                     }
 
@@ -93,8 +101,11 @@ class SaleController extends Controller
                         'subtotal' => $subtotal,
                     ]);
 
-                    //Actualizar el stock del producto
-                    $product->decrement('stock', $item['quantity']);
+                    //3. Descontar stock DE LA SUCURSAL (Tabla Pivote)
+                    DB::table('branch_product')
+                        ->where('branch_id', $user->branch_id)
+                        ->where('product_id', $item['product_id'])
+                        ->decrement('stock', $item['quantity']);
 
                     //Sumar al gran total
                     $totalSale += $subtotal;

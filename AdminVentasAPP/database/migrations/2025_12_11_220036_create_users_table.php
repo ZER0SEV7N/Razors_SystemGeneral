@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('email')->unique(); #correo electrónico único
             $table->string('password'); #contraseña del usuario
             $table->string('phone')->nullable(); #teléfono del usuario (permite nulos)
-            $table->string('role')->default('user'); #rol del usuario con valor por defecto 'user'
+            $table->string('role')->default('VENDEDOR'); #rol del usuario con valor por defecto 'VENDEDOR'
             $table->timestamps();
         });
     }

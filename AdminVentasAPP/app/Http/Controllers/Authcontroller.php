@@ -32,7 +32,7 @@ class AuthController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'phone' => $validatedData['phone'] ?? null,
-            'role' => 'ADMIN' //Asignar rol de administrador por defecto
+            'role' => 'OWNER' //Asignar rol de administrador por defecto
         ]);
         #Generar el tokem
         $token = $user->createToken('auth_token')->plainTextToken;

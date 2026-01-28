@@ -42,6 +42,14 @@ class Product extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    //Relación: Un producto está en muchas sucursales
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'branch_product', 'product_id', 'branch_id')
+                    ->withPivot('stock') // Importante para leer el stock local
+                    ->withTimestamps();
+    }
+
     //--Eventos del modelo de producto
     protected static function booted()
     {
