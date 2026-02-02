@@ -15,7 +15,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'El sistema ya tiene un administrador. El registro público está deshabilitado.'
             ], 403);
-        }
+        }   
         
         //Validar los datos de entrada
         $validatedData = $request->validate([
@@ -32,43 +32,59 @@ class AuthController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'phone' => $validatedData['phone'] ?? null,
-            'role' => 'OWNER' //Asignar rol de administrador por defecto
+            'role' => 'OWNER', //Asignar rol de administrador por defecto
+            'branch_id' => null, //El OWNER no pertenece a una sede específica, las ve todas
+            'is_active' => true //Marcar como activo por defecto
         ]);
-        #Generar el tokem
+        
+        //Generar el token
         $token = $user->createToken('auth_token')->plainTextToken;
         
+        //Retornar los datos del usuario junto con el token
         return response()->json([
             'user' => $user,
             'token' => $token
         ], 201);
     }
+
+    
     //Función para manejar el inicio de sesión de usuarios
     public function login(Request $request)
     {
+
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required'
         ]); //Obtener credenciales de la solicitud
+        
         $user = User::where('email', $credentials['email'])->first(); //Buscar usuario por correo electrónico
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         } //Verificar si el usuario existe y la contraseña es correcta
 
+        //SEGURIDAD CRÍTICA: Verificar si está ACTIVO
+        //Si un Admin desactivó a este usuario, no debe poder entrar.
+        if (!$user->is_active) {
+            return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
+        }
+
         //Generar token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        //Retornar el token JWT generado
+        //Retornar los datos del usuario junto con el token
         return response()->json([
-            'user' => $user,
-            'token' => $token
+            'message' => 'Inicio de sesión exitoso',
+            'user' => $user,  // Incluye el objeto 'branch' dentro gracias al with()
+            'token' => $token,
+            'role' => $user->role // Útil para redireccionar en el Front
         ]);
     }
 
     //Funcion para obtener el perfil del usuario autenticado
     public function profile(Request $request)
     {
-        return response()->json($request->user()); //Retornar los datos del usuario autenticado
+        return response()->json($request->user()->load('branch')); //Retornar los datos del usuario autenticado
     }
 
     //Funcion para cerrar sesión del usuario

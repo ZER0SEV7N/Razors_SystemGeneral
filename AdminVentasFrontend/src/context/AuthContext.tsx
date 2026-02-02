@@ -3,13 +3,14 @@
 //Importaciones necesarias
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../lib/api'; // Asegúrate de tener un módulo api configurado para manejar las solicitudes HTTP
-import type { User } from '../types/index'; // Asegúrate de tener un tipo User definido
+import type { Branch, User } from '../types/index'; // Asegúrate de tener un tipo User definido
 
 //Definir que datos y funciones estaran disponibles para toda la aplicación
 interface AuthContextType {
     user: User | null; // Información del usuario autenticado
-    login: (token: string, userData: User) => void; //Función para iniciar sesión
+    login: (token: string, userData: User, remember: boolean) => void; //Función para iniciar sesión
     logout: () => void; //Función para cerrar sesión
+    currentBranch: Branch | null;
     isAuthenticated: boolean; //Estado de autenticación
     isLoading: boolean; //Estado de carga
 }
@@ -21,36 +22,50 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null); //Estado del usuario autenticado
     const [isLoading, setIsLoading] = useState<boolean>(true); //Estado de carga
+    //Nuevo estado derivado para fácil acceso
+    const currentBranch = user?.branch || null;
 
     //Verificar la sesion guardada en el localhost al recargar la pagina
     useEffect(() => {
-        const checkSession = async () => {
-            const token = localStorage.getItem('token'); // Obtener el token del almacenamiento local
-            const storedUser = localStorage.getItem('user'); // Obtener los datos del usuario del almacenamiento local
-
-            if(token && storedUser) {
+        const initAuth = async () => {
+            //1. Buscamos token primero en localStorage (Persistente)
+            let storedToken = localStorage.getItem("token");
+            //2. Si no hay, buscamos en sessionStorage (Temporal)
+            if (!storedToken) {
+                storedToken = sessionStorage.getItem("token");
+            }
+            if (storedToken) {
                 try {
-                    // Opcional: Podrías verificar con el backend si el token sigue vivo
-                    // const res = await api.get('/me'); 
-                    // setUser(res.data);
-                    
-                    // Por ahora confiamos en localStorage para rapidez
-                    setUser(JSON.parse(storedUser));
+                    //Llamamos al profile para obtener datos frescos (incluyendo branch)
+                    const res = await api.get("/profile");
+                    setUser(res.data);
                 } catch (error) {
-                    // Si el token no sirve, limpiamos todo
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
+                    console.error("Sesión inválida", error);
+                    //Si falla, limpiamos todo por seguridad
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    setUser(null);
                 }
             }
             setIsLoading(false);
         };
-        checkSession();
+        initAuth();
     }, []);
+
+
     //Función Login: Guarda token y usuario
-    const login = (token: string, userData: User) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
+    const login = (newToken: string, newUser: User, remember: boolean) => {
+        //Lógica de "Mantener Sesión":
+        if (remember) {
+            //Persistente: Sobrevive al cerrar el navegador
+            localStorage.setItem("token", newToken);
+            localStorage.setItem("role", newUser.role); 
+        } else {
+            //Temporal: Muere al cerrar la pestaña/navegador
+            sessionStorage.setItem("token", newToken);
+            sessionStorage.setItem("role", newUser.role);
+        }
+        setUser(newUser);
     };
 
     //Función Logout: Limpia todo y avisa al backend
@@ -61,8 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Error al cerrar sesión en servidor", error);
         } finally {
             //Limpieza local obligatoria
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            localStorage.clear();
+            sessionStorage.clear();
             setUser(null);
             window.location.href = '/login'; //Redirección forzada
         }
@@ -71,10 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (
         <AuthContext.Provider value={{ 
             user, 
+            currentBranch, 
+            isAuthenticated: !!user, 
+            isLoading, 
             login, 
-            logout, 
-            isAuthenticated: !!user,
-            isLoading 
+            logout
         }}>
             {children}
         </AuthContext.Provider>
@@ -84,8 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 // --- HOOK PERSONALIZADO (El que usas en tus componentes) ---
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error("useAuth debe usarse dentro de un AuthProvider");
-    }
+    if (!context) throw new Error("useAuth debe usarse dentro de AuthProvider");
     return context;
 };

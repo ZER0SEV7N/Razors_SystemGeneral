@@ -41,9 +41,20 @@ const ClientsPage = () => {
     setLoading(true);
     try {
       const res = await api.get("clients");
-      setClients(res.data); // Ajuste para acceder a data dentro de data
+      //Lógica inteligente: ¿Viene paginado (dentro de .data) o directo?
+      const receivedData = res.data.data ? res.data.data : res.data;
+
+      //Validación de seguridad: Solo guardamos si es un array real
+      if (Array.isArray(receivedData)) {
+        setClients(receivedData);
+      } else {
+        console.error("La API no devolvió una lista válida:", receivedData);
+        setClients([]); //Evita que la app se rompa
+      }
+
     } catch (error) {
       console.error("Error fetching clients:", error);
+      setClients([]);
     } finally {
       setLoading(false);
     }

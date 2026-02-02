@@ -1,109 +1,120 @@
 <?php
 //Razors_SystemGeneral/AdminVentasAPP/Routes/api.php
 //Api Routes para la aplicacion AdminVentasAPP, se definen las rutas que seran accedidas mediante peticiones API.
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\BranchController;
-use App\Http\Controllers\SaleController;
-use App\Http\Controllers\DespathGuideController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\CompanyController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\{
+    AuthController,
+    ProfileController,
+    UserController,
+    CompanyController,
+    BranchController,
+    CategoryController,
+    ProductController,
+    SaleController,
+    ClientController,
+    ReportController,
+    DespathGuideController,
+    DashboardController,
+    InventoryController,
+};
 use Illuminate\Support\Facades\Route;
+    /*--------------------------------------------------------------------------
+    | RUTAS PÚBLICAS (Sin Token)
+    |--------------------------------------------------------------------------*/
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']); // Se deshabilita tras crear el primer usuario
 
-/*-------------------------------------------------------
----- RUTAS Publicas ------------------------------
---------------------------------------------------------*/
+    /*--------------------------------------------------------------------------
+    | RUTAS PROTEGIDAS (Requieren Token)
+    |--------------------------------------------------------------------------*/
+    Route::middleware('auth:sanctum')->group(function () {
 
-//Ruta para el login de usuarios
-Route::post('/login', [AuthController::class, 'login']);
-//Ruta para el registro de nuevos usuarios [solo si no hay usuarios registrados, Al crear el primero se deshabilita esta ruta]
-//El primer usuario registrado sera el ADMIN del sistema
-Route::post('/register', [AuthController::class, 'register']);
+        // =========================================================================
+        // 🟢 NIVEL 1: COMÚN (Todos - Siempre limitado a su Sucursal)
+        // =========================================================================
+        Route::controller(AuthController::class)->group(function () {
+            Route::get('/profile', 'profile');
+        });
+        Route::put('/profile', [ProfileController::class, 'update']);
 
-//Rutas protegidas que requieren autenticacion
-Route::middleware('auth:sanctum')->group(function () {
+        // Lectura para Vender (Visualizar Catálogo Global)
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/products', [ProductController::class, 'index']); 
+        Route::get('/products/{id}', [ProductController::class, 'show']);
+        Route::apiResource('clients', ClientController::class);
 
-    //==========================================================
-    //NIVEL 1: ACCESO COMÚN (Vendedores, Gerentes, Admins)
-    //==========================================================
+        // Operativa de Ventas (Limitada por Sede en el Controlador)
+        Route::controller(SaleController::class)->group(function () {
+            Route::get('/sales', 'index');       
+            Route::get('/sales/{id}', 'show');   
+            Route::post('/sales', 'store');      
+        });
+        Route::get('/reports/sales/{id}', [ReportController::class, 'saleInvoice']);
 
-    //Perfil Personal
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/profile', [ProfileController::class, 'update']); //Actualizar datos y foto
-
-    //Ventas (Punto de Venta)
-    Route::get('/sales', [SaleController::class, 'index']);      //Historial
-    Route::get('/sales/{id}', [SaleController::class, 'show']);  //Detalle
-    Route::post('/sales', [SaleController::class, 'store']);     //Registrar Venta (Nace PENDIENTE)
-    
-    //Reportes Básicos (Boleta/Factura individual para entregar al cliente)
-    Route::get('/reports/sales/{id}', [ReportController::class, 'saleInvoice']);
-
-    //Clientes (Necesario para vender)
-    Route::apiResource('clients', ClientController::class);
-
-    //Consulta de Inventario (Solo lectura para poder vender)
-    Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/products/{id}', [ProductController::class, 'show']);
-    Route::get('/categories', [CategoryController::class, 'index']);
-
-    //Consultar las guias de remision
-    Route::get('/guides/{id}', [DespathGuideController::class, 'show']); //Ver datos
-    Route::get('/guides/{id}/pdf', [DespathGuideController::class, 'pdf']); //Descargar PDF
-    
-    //==========================================================
-    //NIVEL 2: SUPERVISIÓN (ADMIN y GERENTE)
-    //==========================================================
-    Route::middleware(['role:ADMIN,GERENTE'])->group(function () {
+    //=========================================================================
+    //🟡 NIVEL 2: OPERATIVO DE SEDE (ADMIN, GERENTE)
+    //=========================================================================
+    //Nota: El OWNER también entra aquí por herencia de permisos (si lo deseas) 
+    //o simplemente se le da acceso explícito. Para simplificar, asumimos que 
+    //ADMIN gestiona la sede.
+    Route::middleware(['role:OWNER,ADMIN,GERENTE'])->group(function () {
         
-        //Gestión de Productos (Crear, Editar, Desactivar)
-        Route::post('/products', [ProductController::class, 'store']);
-        Route::put('/products/{id}', [ProductController::class, 'update']);  //Edición normal
-        Route::post('/products/{id}', [ProductController::class, 'update']); //Fix para subir imagen en edición
-        Route::patch('/products/{id}/reactivate', [ProductController::class, 'reactivate']);
-        Route::delete('/products/{id}', [ProductController::class, 'destroy']); //Soft delete (Desactivar)
-
-        //Gestión de Categorías
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::put('/categories/{id}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
-
-        //Aprobación de Ventas (Confirmar pago o Anular)
-        Route::put('/sales/{id}', [SaleController::class, 'update']);
+        // Aprobación de Ventas Locales
+        Route::put('/sales/{id}', [SaleController::class, 'update']); 
         
-        //Gestión de Guías de Despacho
-        Route::post('/guides', [DespathGuideController::class, 'store']); //Crear guía desde venta
-
+        // Guías de Remisión
+        Route::get('/guides/{id}', [DespathGuideController::class, 'show']);
+        Route::get('/guides/{id}/pdf', [DespathGuideController::class, 'pdf']);
+        Route::post('/guides', [DespathGuideController::class, 'store']); 
     });
 
-    //==========================================================
-    //NIVEL 3: SOLO DUEÑO (ADMIN)
-    //==========================================================
-    Route::middleware(['role:ADMIN'])->group(function () {
+    //=========================================================================
+    //🟠 NIVEL 3: ADMINISTRACIÓN DE SEDE (Solo ADMIN y OWNER)
+    //=========================================================================
+    Route::middleware(['role:OWNER,ADMIN'])->group(function () {
         
-        //Gestión de Usuarios (Crear nuevos Vendedores/Gerentes)
+        //Gestión de Usuarios (El controlador filtrará para que ADMIN solo vea los suyos)
         Route::apiResource('users', UserController::class);
 
-        //Configuración Global (Logo, Nombre Empresa)
-        Route::get('/company', [CompanyController::class, 'index']);
-        Route::match(['put', 'post'], '/company', [CompanyController::class, 'update']);
-
-        //Datos Financieros y Reportes Globales
+        //Inventario y Reportes
         Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
-        Route::get('/reports/monthly', [ReportController::class, 'monthlySales']);
-        // 🔥 AGREGA ESTA LÍNEA AQUÍ PARA EL INVENTARIO:
-        Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
+        Route::controller(ReportController::class)->group(function () {
+            Route::get('/reports/monthly', 'monthlySales');
+            Route::get('/reports/inventory', 'inventoryReport');
+        });
 
+        //Movimiento de Inventario (Distribuir a SU sucursal)
+        Route::controller(InventoryController::class)->group(function () {
+            Route::post('/inventory/transfer', 'transferStock');
+            Route::get('/inventory/branch/{id}', 'branchStock'); 
+        });
+    });
 
-        //Eliminación física (Solo Admin debería tener este poder destructivo)
-        Route::delete('/products/{product}/force', [ProductController::class, 'delete']);
+    //=========================================================================
+    //🔴 NIVEL 4: DUEÑO SUPREMO (Solo OWNER)
+    //=========================================================================
+    Route::middleware(['role:OWNER'])->group(function () {
+        
+        //Gestión de la Empresa
+        Route::controller(CompanyController::class)->group(function () {
+            Route::get('/company', 'index');
+            Route::match(['put', 'post'], '/company', 'update');
+        });
 
-        //Gestión de Sedes (Sucursales)
+        //Gestión de Estructura (Crear/Borrar Sucursales)
         Route::apiResource('branches', BranchController::class);
+
+        //Gestión del Catálogo Global (Crear/Borrar Productos Globales)
+        //El ADMIN solo ve el catálogo, el OWNER lo modifica.
+        Route::controller(ProductController::class)->group(function () {
+            Route::post('/products', 'store');
+            Route::put('/products/{id}', 'update');
+            Route::post('/products/{id}', 'update'); 
+            Route::patch('/products/{id}/reactivate', 'reactivate');
+            Route::delete('/products/{id}', 'destroy');
+            Route::delete('/products/{id}/force', 'delete');
+        });
+
+        //Categorías Globales
+        Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
     });
 });

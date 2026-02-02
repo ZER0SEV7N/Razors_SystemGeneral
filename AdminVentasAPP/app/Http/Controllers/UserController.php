@@ -14,46 +14,70 @@ class UserController extends Controller
     //Funcion para obtener la lista de usuarios
     public function index()
     {
-        return User::with('branch')->orderBy('user_id', 'desc')->get();
-    }
+        $currentUser = auth()->user(); //Obtener el usuario autenticado
+        $query = User::with('branch')->orderBy('user_id', 'desc'); //Iniciar la consulta con la relación de sucursal
 
-    //Funcion para Crear un nuevo usuario (solamente por el ADMIN)
-    public function store(Request $request)
-    {
-        //Validar los datos de entrada
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-            'role' => 'required|in:OWNER,ADMIN,GERENTE,VENDEDOR',
-            'phone' => 'nullable|string|max:20',
-            'branch_id' => [Rule::requiredIf($request->role !== 'OWNER'), 
-                'nullable', 
-                'exists:branches,branch_id']
-        ]);
-
-        //Check si el rol es OWNER, solo un OWNER puede crear otro OWNER
-        $currentUser = auth()->user();
-        if ($request->role === 'OWNER' && $currentUser->role !== 'OWNER') {
-            return response()->json(['message' => 'Solo un Dueño puede crear otros Dueños.'], 403);
+        // Si NO es OWNER, filtrar solo los usuarios de su propia sucursal
+        if ($currentUser->role !== 'OWNER') {
+            $query->where('branch_id', $currentUser->branch_id); //Filtrar por sucursal
         }
 
-        //Crear un nuevo usuario en la base de datos
-        $user = User::Create([
-            'name' => $request->name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'phone' => $request->phone ?? null,
-            'branch_id' => $request->role === 'OWNER' ? null : $request->branch_id,
+        return $query->get(); //Devolver la lista de usuarios
+    }
+
+    //Funcion para Crear un nuevo usuario (solamente por el ADMIN y OWNER)
+    public function store(Request $request)
+    {
+        $currentUser = auth()->user();
+
+        //Validar los datos de entrada
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email'     => 'required|string|email|max:255|unique:users',
+            'password'  => 'required|string|min:6',
+            'phone'     => 'nullable|string|max:20',
+            'role'      => 'required|in:OWNER,ADMIN,GERENTE,VENDEDOR',
+            //branch_id es opcional aquí porque lo controlamos por lógica abajo
+            'branch_id' => [
+                // Solo es obligatorio enviarlo si SOY OWNER y estoy creando un NO-OWNER
+                Rule::requiredIf(fn() => auth()->user()->role === 'OWNER' && $request->role !== 'OWNER'), 
+                'nullable', 
+                'exists:branches,branch_id'
+            ]
         ]);
 
-        return response()->json([
-            'message' => 'Usuario creado exitosamente',
-            'user' => $user
-        ], 201);
+        //2. Lógica de Asignación de Sucursal y Seguridad de Roles
+        $targetBranchId = $request->branch_id;
+        
+        if ($currentUser->role !== 'OWNER') {
+            //Un ADMIN solo puede crear usuarios para SU propia sucursal
+            $targetBranchId = $currentUser->branch_id;
+
+            //Un ADMIN no puede crear roles superiores o iguales (OWNER/ADMIN)
+            if (in_array($request->role, ['OWNER', 'ADMIN'])) {
+                return response()->json(['message' => 'No tienes permisos para crear este nivel de usuario.'], 403);
+            }
+        } else {
+            //Si es OWNER creando otro OWNER, branch_id debe ser NULL
+            if ($request->role === 'OWNER') {
+                $targetBranchId = null;
+            }
+        }
+
+        //3. Crear Usuario
+        $user = User::create([
+            'name'      => $request->name,
+            'last_name' => $request->last_name,
+            'email'     => $request->email,
+            'password'  => Hash::make($request->password),
+            'role'      => $request->role,
+            'phone'     => $request->phone,
+            'branch_id' => $targetBranchId,
+        ]);
+
+        //Retornar respuesta
+        return response()->json(['message' => 'Usuario creado exitosamente', 'user' => $user], 201);
     }
 
     //Funcion para actualizar un usuario
@@ -61,16 +85,21 @@ class UserController extends Controller
     {
         //Buscar el usuario por ID
         $user = User::findOrFail($id);
+        //Verificar permisos del usuario autenticado
+        $currentUser = auth()->user();
+        // Seguridad: ADMIN no puede editar usuarios de OTRA sucursal
+        if ($currentUser->role !== 'OWNER' && $user->branch_id !== $currentUser->branch_id) {
+            return response()->json(['message' => 'No puedes editar usuarios de otra sede.'], 403);
+        }
         //Validar los datos de entrada
         $request->validate([
-            'name' => 'required|string|max:255',      
-            'last_name' => 'required|string|max:255', 
-            'email' => 'required|email|unique:users,email,' . $id . ',user_id',
-            'role' => 'required|in:ADMIN,VENDEDOR,GERENTE', 
-            'password' => 'nullable|string|min:6',
-            // LÓGICA CLAVE: branch_id requerido si NO es OWNER
+            'name'      => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email'     => 'required|email|unique:users,email,' . $id . ',user_id',
+            'role'      => 'required|in:OWNER,ADMIN,VENDEDOR,GERENTE',
             'branch_id' => [
-                Rule::requiredIf($request->role !== 'OWNER'), 
+                //Solo es obligatorio enviarlo si SOY OWNER y estoy creando un NO-OWNER
+                Rule::requiredIf(fn() => auth()->user()->role === 'OWNER' && $request->role !== 'OWNER'), 
                 'nullable', 
                 'exists:branches,branch_id'
             ]
@@ -80,9 +109,20 @@ class UserController extends Controller
         $user->name = $request->name;
         $user->last_name = $request->last_name;
         $user->email = $request->email;
-        $user->role = $request->role;
         $user->phone = $request->phone;
-        $user->branch_id = $request->role === 'OWNER' ? null : $request->branch_id;
+
+        //Solo OWNER puede cambiar el rol libremente. ADMIN limitado.
+        if ($currentUser->role === 'OWNER') {
+            $user->role = $request->role;
+            $user->branch_id = ($request->role === 'OWNER') ? null : $request->branch_id;
+        } else {
+            //ADMIN no puede ascender a nadie a ADMIN u OWNER
+            if (in_array($request->role, ['OWNER', 'ADMIN']) && $user->role !== $request->role) {
+                return response()->json(['message' => 'No autorizado para asignar este rol.'], 403);
+            }
+            //ADMIN solo puede asignar roles inferiores al suyo mismo
+            $user->role = $request->role;
+        }
 
         //Si se proporciona una nueva contraseña, actualizarla
         if ($request->filled('password')) {
@@ -98,27 +138,28 @@ class UserController extends Controller
     public function destroy($id)
     {   
         //Buscar y eliminar el usuario
-        $user = User::findOrFail($id);
+        $userToDelete = User::findOrFail($id);
         $currentUser = auth()->user();
         //1. Prevenir auto-eliminación
         if ($currentUser->user_id == $id) {
             return response()->json(['message' => 'No puedes eliminarte a ti mismo'], 400);
         }
 
-        //2. PROTECCIÓN ABSOLUTA DEL DUEÑO (ID 1)
-        //Nadie puede borrar al usuario con ID 1, ni siquiera otro Admin.
-        if ($user->user_id == 1) {
-            return response()->json(['message' => 'No se puede eliminar la cuenta del Dueño (Administrador Principal).'], 403);
+        //Seguridad: ADMIN solo borra gente de SU sucursal
+        if ($currentUser->role !== 'OWNER' && $userToDelete->branch_id !== $currentUser->branch_id) {
+            return response()->json(['message' => 'No puedes eliminar usuarios de otra sede.'], 403);
         }
 
-        //3. JERARQUÍA DE ADMINS
-        //Si intentas borrar a un 'ADMIN', tú debes ser obligatoriamente el ID 1.
-        //Esto evita que un Admin secundario borre a otro Admin.
-        if ($user->role === 'ADMIN' && $currentUser->role !== 'OWNER') {
+        // Protección de Jerarquía
+        if ($userToDelete->role === 'OWNER') {
+            return response()->json(['message' => 'No se puede eliminar al Dueño.'], 403);
+        }
+        if ($userToDelete->role === 'ADMIN' && $currentUser->role !== 'OWNER') {
             return response()->json(['message' => 'Solo el Dueño puede eliminar a otros Administradores.'], 403);
         }
 
-        $user->delete(); // El modelo se encarga de borrar el avatar
-        return response()->json(['message' => 'Usuario eliminado']);
+        $userToDelete->is_active = false;
+        $userToDelete->save();
+        return response()->json(['message' => 'Usuario desactivado']);
     }
 }

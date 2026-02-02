@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request; //Importa la clase Request
 use App\Models\Category; //Importa el modelo Category
 use App\Http\Controllers\Controller; //Importa el controlador base
+use Illuminate\Validation\Rule; //Importa para validaciones avanzadas
 
 class CategoryController extends Controller
 {
@@ -14,6 +15,7 @@ class CategoryController extends Controller
         //withCount' agrega un campo 'products_count' a cada objeto JSON
         $categories = Category::withCount('products')
             ->where('is_active', true) //Solo activas (opcional, según tu lógica)
+            ->orderBy('name', 'asc') // Orden alfabético ayuda al usuario
             ->get();
 
         return response()->json($categories);
@@ -22,7 +24,7 @@ class CategoryController extends Controller
     //Funcion para crear una nueva categoria
     public function store(Request $request){
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean'
         ]);
@@ -39,7 +41,11 @@ class CategoryController extends Controller
     //Funcion para actualizar una categoria específica
     public function update(Request $request, Category $category){
         $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
+            // Validamos nombre único pero ignorando la categoría actual
+            'name'=> [
+                'sometimes', 'required', 'string', 'max:255', 
+                Rule::unique('categories', 'name')->ignore($category->category_id, 'category_id')
+            ],
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean'
         ]);
@@ -50,9 +56,9 @@ class CategoryController extends Controller
     //Funcion para eliminar una categoria específica
     public function destroy(Category $category){
         //1. Verificamos si tiene productos asociados (incluso si la categoría está activa)
-        if ($category->products()->count() > 0) {
+        if ($category->products()->where('is_active', true)->exists()) {
             return response()->json([
-                'message' => 'No se puede eliminar la categoría porque tiene productos asociados.'
+                'message' => 'No se puede eliminar: Hay productos activos en esta categoría.'
             ], 409); 
         }
 

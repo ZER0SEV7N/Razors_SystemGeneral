@@ -1,12 +1,8 @@
-//adminVentasFrontend/src/types/index.ts
 /*--------------------------------------------------------------------
     Tipos y interfaces globales para la aplicación AdminVentasFrontend
-    - Principales funcionalidades:
-        - Definición de tipos para productos, categorías y usuarios
-        - Facilitar la tipificación en componentes y funciones
 --------------------------------------------------------------------*/
 
-//Interfaz para las sedes (branches)
+// Interfaz para las sedes (branches)
 export interface Branch {
     branch_id: number;
     name: string;
@@ -17,7 +13,7 @@ export interface Branch {
     company_id: number;
 }
 
-//Interfaz para una categoría
+// Interfaz para una categoría
 export interface Category {
     category_id: number;
     name: string;
@@ -26,49 +22,67 @@ export interface Category {
     products_count?: number;
 }
 
-//Interfaz para un usuario
+// Interfaz para un usuario
 export interface User {
     user_id: number;
     name: string;
     last_name: string;
-    role: 'ADMIN' | 'VENDEDOR' | 'GERENTE'; // Tipado estricto para roles
+    // Roles actualizados según tu backend
+    role: 'OWNER' | 'ADMIN' | 'VENDEDOR' | 'GERENTE'; 
     email: string;
-    avatar?: string; //Campo opcional para la ruta del avatar
-    branch_id?: number;
-    branch?: Branch;
+    phone?: string;
+    avatar?: string;
+    branch_id?: number | null; // Nullable para OWNER
+    branch?: Branch; // Relación con la sede
+    is_active?: boolean;
 }
 
-//Interfaz para configuracion de compañia
+// Interfaz para configuracion de compañia
 export interface CompanySettings {
     name: string;
     address: string;
     phone: string;
+    email?: string;
+    ruc?: string;
+    website?: string;
     logo_path?: string;
 }
 
-//Interfaz para un producto
+// Interfaz para un producto
 export interface Product {
-    product_id: number;
+product_id: number;
     name: string;
     description?: string;
     price: number;
-    stock: number;
-    min_stock: number;
-    is_active: boolean;
-    image?: string; //Campo opcional para la imagen del producto
+    image?: string;
     category_id: number;
-    category?: Category; //Relación con categoría
-    user?: User; //Relación con usuario
+    category?: Category;
+    is_active: boolean;
+    min_stock: number;
+    
+    stock: number; // Stock Central (Global)
+
+    // NUEVO: Array de sucursales con su stock
+    branches?: Array<{
+        is_main: boolean;
+        branch_id: number;
+        name: string;
+        pivot: {
+            stock: number;
+        }
+    }>;
 }
 
-//Interfaz para el carrito de compras
+// NUEVO: Interfaz para Producto en Sucursal (Stock Local)
+export interface BranchProduct extends Product {
+    local_stock: number; // Stock específico de la sede
+}
+
 export interface CartItem extends Product {
-    quantity: number; //Cantidad del producto en el carrito
-    subtotal: number; //Subtotal calculado (price * quantity)
+    quantity: number;
+    subtotal: number;
 }
 
-
-//Interfaz para Respuestas Paginadas (Laravel paginate)
 export interface PaginatedResponse<T> {
     data: T[];
     current_page: number;
@@ -77,7 +91,6 @@ export interface PaginatedResponse<T> {
     total: number;
 }
 
-//Interfaz para un cliente
 export interface Client {
     client_id: number;
     name: string;
@@ -88,7 +101,6 @@ export interface Client {
     address?: string;
 }
 
-//Interfaz para el detalle de una venta
 export interface SaleDetail {
     detail_id: number;
     sale_id: number;
@@ -96,26 +108,37 @@ export interface SaleDetail {
     quantity: number;
     price: number;
     subtotal: number;
-    // Relación con producto (para mostrar nombre en el historial)
     product?: Product; 
 }
 
-//Interfaz para una venta
 export interface Sale {
     sale_id: number;
     user_id: number;
     branch_id: number;
     client_id: number | null;
-    sale_date: string; // Las fechas suelen venir como string ISO desde Laravel
+    sale_date: string;
     total: number;
-    status: 'PENDIENTE' | 'PAGADO' | 'CANCELADO'; // Tipado estricto para estados
-    // --- NUEVO: Datos de pago ---
+    status: 'PENDIENTE' | 'PAGADO' | 'CANCELADO';
     payment_method: string; 
     payment_reference?: string;
-    // Relaciones
     user?: User;
     client?: Client;
     details: SaleDetail[];
+    // Relación opcional para saber si ya tiene guía
+    despath_guide?: DespathGuide; 
+}
+
+// NUEVO: Interfaz para Guía de Remisión
+export interface DespathGuide {
+    guide_id: number;
+    sale_id: number;
+    transfer_date: string;
+    origin_address: string;
+    destination_address: string;
+    driver_name?: string;
+    vehicle_plate?: string;
+    status: string;
+    sale?: Sale;
 }
 
 export interface DashboardStats {

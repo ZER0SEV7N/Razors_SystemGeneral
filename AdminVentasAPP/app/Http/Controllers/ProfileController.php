@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -18,14 +19,14 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'required|string|max:80',
             'last_name' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email,' . $user->user_id . ',user_id',
+            'email' => ['required', 'email', Rule::unique('users')->ignore($user->user_id, 'user_id')], //Unico excepto el propio
             'password' => 'nullable|string|min:6',
             'avatar' => 'nullable|image|max:2048', //Maximo 2MB
         ]);
 
-        $user->name = $request->name;
-        $user->last_name = $request->last_name;
-        $user->email = $request->email;
+        $user->name = $request->name; //Actualizar nombre
+        $user->last_name = $request->last_name; //Actualizar apellido
+        $user->email = $request->email; //Actualizar email
 
         //Si se proporciona una nueva contraseña, actualizarla
         if ($request->filled('password')){
@@ -41,10 +42,11 @@ class ProfileController extends Controller
             //Guardar nuevo avatar
             $path = $request->file('avatar')->store('avatars', 'public');
             
+            //Actualizar ruta del avatar en el usuario
             $user->avatar = $path;
         }
 
-        $user->save();
+        $user->save(); //Guardar cambios en el usuario
 
         return response()->json(['message' => 'Perfil actualizado correctamente.'], 200);
     }

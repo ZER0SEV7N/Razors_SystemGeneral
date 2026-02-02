@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 class DespathGuide extends Model
 {
     use HasFactory;
-    
+
+    protected $table = 'despatch_guides';
     protected $primaryKey = 'guide_id'; //Clave primaria de la tabla
 
     protected $fillable = [

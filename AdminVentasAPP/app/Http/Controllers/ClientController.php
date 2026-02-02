@@ -8,10 +8,20 @@ use Illuminate\Http\Request;
 class ClientController extends Controller
 {
     //Metodo para listar todos los clientes
-    public function index()
+    public function index(Request $request)
     {
-        $clients = Client::latest()->get(); //Obtener todos los clientes
-        return response()->json($clients); //Retornar en formato JSON
+        //Buscador simple y Paginación
+        $query = Client::latest();
+        //Si hay un término de búsqueda, aplicarlo
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('document_number', 'like', "%{$search}%");
+            });
+        }
+
+        return response()->json($query->paginate(20)); //Retorna de 20 en 20
     }
 
     //Metodo para crear un nuevo cliente
@@ -30,17 +40,21 @@ class ClientController extends Controller
         return response()->json([
             'message' => 'Cliente creado exitosamente',
             'client' => $client 
-        ],201); //Retornar el cliente creado con codigo 201
+        ], 201); //Retornar el cliente creado con codigo 201
     }
 
     //Actualizar un cliente existente
     public function update(Request $request, $id)
     {
+        //Buscar el cliente por ID
         $client = Client::find($id);
 
+        //En caso de que no exista
         if(!$client){
             return response()->json(['message' => 'Cliente no encontrado'], 404);
         }
+
+        //Validar los datos de entrada
         $request->validate([
             'name' => 'required|string|max:255',
             'document_number' => 'required|string|max:100|unique:clients,document_number,'.$id,

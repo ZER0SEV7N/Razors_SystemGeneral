@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\Client;
 use App\Models\Branch;
+use App\Models\DespathGuide;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,17 +20,15 @@ class SaleController extends Controller
         $user = $request->user();
 
         //Cargamos relaciones útiles
-        $query = Sale::with(['client', 'user', 'details.product']);
+        $query = Sale::with(['client', 'user', 'details.product', 'despath_guide']); 
 
-        //🔒 FILTRO DE SEGURIDAD:
-        //Si NO es Admin, solo ve las ventas de su propia sucursal
-        if ($user->role !== 'ADMIN') {
+        //Si NO es OWNER, solo ve las ventas de su propia sucursal
+        if ($user->role !== 'OWNER') {
             $query->where('branch_id', $user->branch_id);
         }
 
         //Aplicar filtros de búsqueda si se proporcionan
-        $sales = $query->latest()->paginate(10);
-        return response()->json($sales);
+        return response()->json($query->latest()->paginate(10));
     }
 
     //Funcion para crear una nueva venta
@@ -42,27 +41,42 @@ class SaleController extends Controller
             'products.*.product_id' => 'required|exists:products,product_id',
             'products.*.quantity' => 'required|integer|min:1',
             'payment_method' => 'required|string', 
-            'payment_reference' => 'nullable|string'
+            'payment_reference' => 'nullable|string',
+            // NUEVO: Aceptamos branch_id opcional
+            'branch_id' => 'nullable|exists:branches,branch_id' 
         ]);
 
-        $user = $request->user();
+        $user = $request->user(); //Usuario autenticado
 
-        // El vendedor DEBE tener una sede asignada para poder vender
-        if (!$user->branch_id) {
-            return response()->json(['message' => 'No tienes una sucursal asignada para realizar ventas.'], 403);
+        //Determinar la sucursal para la venta
+        $targetBranchId = null;
+
+        //El vendedor DEBE tener una sede asignada para poder vender
+        if($user->role === 'OWNER') {
+            //Si es Owner, usamos la sucursal que eligió en el frontend.
+            //Si no eligió ninguna, intenta usar su asignada (si tuviera).
+            $targetBranchId = $request->branch_id ?? $user->branch_id;
+        } else {
+            //Si es Vendedor/Admin, FORZAMOS su propia sucursal por seguridad.
+            $targetBranchId = $user->branch_id;
+        }
+
+        //Validación final: No se puede vender en el aire
+        if (!$targetBranchId) {
+            return response()->json(['message' => 'No se ha especificado una sucursal para la venta.'], 400);
         }
 
         try{
-            //2. Iniciar la transaccion
-            return DB::transaction(function () use ($request, $user) { 
+            //Iniciar la transaccion
+            return DB::transaction(function () use ($request, $user, $targetBranchId) { 
                 //Calcular el total de la venta y preparar los datos
                 $totalSale = 0;
                 $saleDetails = [];
 
-                //3. Crear la cabecera de la venta
+                //Crear la cabecera de la venta
                 $sale = Sale::create([
                     'user_id' => $request->user()->user_id, //Asignar el usuario autenticado como vendedor
-                    'branch_id' => $user->branch_id, //Asignar la sucursal del vendedor
+                    'branch_id' => $targetBranchId, //Asignar la sucursal determinada
                     'client_id' => $request->client_id,
                     'sale_date' => now(),
                     'total' => 0, //Se actualizara luego
@@ -71,39 +85,39 @@ class SaleController extends Controller
                     'payment_reference' => $request->payment_reference 
                 ]);
 
-                //4. Procesar cada producto
+                //Procesar cada producto
                 foreach($request->products as $item){
-                    //Bloquear el producto para evitar condiciones de carrera
-                    $product = Product::lockForUpdate()->find($item['product_id']);
-
-                    //1. Verificar si la sucursal del vendedor tiene este producto registrado
-                    //Buscamos en la tabla pivote
+                    //Validar Stock en la sucursal seleccionada
                     $branchProduct = DB::table('branch_product')
-                        ->where('branch_id', $user->branch_id)
-                        ->where('product_id', $item['product_id'])
-                        ->first(); //Usamos first() para obtener el objeto o null
+                        ->where('branch_id', $targetBranchId) //Sucursal seleccionada
+                        ->where('product_id', $item['product_id']) //Producto actual
+                        ->first();
+                    
+                    //Obtener el producto para el precio historico
+                    $product = Product::find($item['product_id']);
 
-                    //Verificar stock
+                    //Obtener el producto para el precio historico
                     if (!$branchProduct || $branchProduct->stock < $item['quantity']) {
-                        throw new \Exception("Stock insuficiente para el producto: {$product->name}");
+                        $prodName = Product::find($item['product_id'])->name;
+                        throw new \Exception("Stock insuficiente en la sucursal seleccionada para: {$prodName}");
                     }
 
                     //Calcular subtotal
-                    $price = $product->price;
-                    $subtotal = $price * $item['quantity'];
+                    $product = Product::find($item['product_id']);
+                    $subtotal = $product->price * $item['quantity'];
 
                     //Crear el detalle de venta
                     SaleDetail::create([
                         'sale_id' => $sale->sale_id,
                         'product_id' => $product->product_id,
                         'quantity' => $item['quantity'],
-                        'price' => $price, //precio unitario Historico
+                        'price' => $product->price, //precio unitario Historico
                         'subtotal' => $subtotal,
                     ]);
 
-                    //3. Descontar stock DE LA SUCURSAL (Tabla Pivote)
+                    //Descontar stock DE LA SUCURSAL (Tabla Pivote)
                     DB::table('branch_product')
-                        ->where('branch_id', $user->branch_id)
+                        ->where('branch_id', $targetBranchId)
                         ->where('product_id', $item['product_id'])
                         ->decrement('stock', $item['quantity']);
 
@@ -111,20 +125,20 @@ class SaleController extends Controller
                     $totalSale += $subtotal;
                 }
 
-                //5. Actualizar el total de la venta
+                //Actualizar el total de la venta
                 $sale->update(['total' => $totalSale]);
 
-                //6. Confirmar la transaccion
+                //Confirmar la transaccion
                 DB::commit();
 
-                //7. Retornar la respuesta
+                //Retornar la respuesta
                 return response()->json([
                     'message' => 'Venta registrada con exito',
                     'sale_id' => $sale->sale_id,
                 ], 201);
             });
         }catch (\Exception $e){
-            //8. En caso de error, revertir la transaccion
+            //En caso de error, revertir la transaccion
             DB::rollBack();
             return response()->json([
                 'message' => 'Error al registrar la venta: ' . $e->getMessage()
@@ -132,14 +146,22 @@ class SaleController extends Controller
         }
     }
     
-    //Ver detalles de una venta
+    //Funcion para Ver detalles de una venta
     public function show($id)
     {
+        $user = auth()->user();
         $sale = Sale::with(['client', 'user', 'details.product'])->find($id);
+        
         //Verificar si la venta existe
         if(!$sale){
             return response()->json(['message' => 'Venta no encontrada'], 404);
         }
+
+        //Seguridad: Si no es OWNER, validar que la venta sea de su sucursal
+        if ($user->role !== 'OWNER' && $sale->branch_id !== $user->branch_id) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         //retornar la venta con sus detalles
         return response()->json($sale);
     }
@@ -151,33 +173,45 @@ class SaleController extends Controller
         $request->validate([
             'status' => 'required|in:PAGADO,CANCELADO'
         ]);
+        //Iniciar la transaccion
+        try{
+            //Buscar la venta
+            return DB::transaction(function() use ($request, $id){
+                $sale = Sale::with('details')->findOrFail($id);
 
-        //Buscar la venta
-        return DB::transaction(function() use ($request, $id){
-            $sale = Sale::with('details')->findOrFail($id);
-
-            //Evitar cambios si se ha procesado la solicitud
-            if ($sale->status === 'CANCELADO' || $sale->status === 'PAGADO') {
-                return response()->json(['message' => 'No se puede modificar una venta ya procesada'], 400);
-            }
-
-            //Caso A: Aprobar la venta (confirmado)
-            if($request->status === 'PAGADO'){
-                $sale->update(['status' => 'PAGADO']);
-                return response()->json(['message' => 'Venta APROBADA exitosamente']);
-            }
-
-            //Caso B: Cancelar la venta
-            if($request->status === 'CANCELADO'){
-                //Restaurar el stock de los productos
-                foreach($sale->details as $detail){
-                    Product::where('product_id', $detail->product_id)
-                        ->increment('stock', $detail->quantity);
+                //Evitar cambios si se ha procesado la solicitud
+                if ($sale->status === 'CANCELADO' || $sale->status === 'PAGADO') {
+                    return response()->json(['message' => 'No se puede modificar una venta ya procesada'], 400);
                 }
-                $sale->update(['status' => 'CANCELADO']);
-                return response()->json(['message' => 'Venta CANCELADA exitosamente']);
-            }
-        });
+
+                //Caso A: Aprobar la venta (confirmado)
+                if($request->status === 'PAGADO'){
+                    $sale->update(['status' => 'PAGADO']);
+                    return response()->json(['message' => 'Venta APROBADA exitosamente']);
+                }
+
+                //Caso B: Cancelar la venta
+                if($request->status === 'CANCELADO'){
+                    //Devolver stock a la SUCURSAL DE LA VENTA ORIGINAL ($sale->branch_id)
+                    foreach ($sale->details as $detail) {
+                        DB::table('branch_product')
+                            ->where('branch_id', $sale->branch_id) //Tomar la sucursal de la venta
+                            ->where('product_id', $detail->product_id)
+                            ->increment('stock', $detail->quantity);
+                    }
+                    //Actualizar el estado de la venta
+                    $sale->update(['status' => 'CANCELADO']);
+                    //Retornar respuesta
+                    return response()->json(['message' => 'Venta ANULADA exitosamente']);
+                }
+            });
+
+        }catch (\Exception $e){
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al actualizar la venta: ' . $e->getMessage()
+            ], 500);
+        }
     }
     //Bloquear la eliminacion de ventas
     public function destroy($id) {

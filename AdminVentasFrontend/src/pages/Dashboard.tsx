@@ -136,7 +136,7 @@ const Dashboard = () => {
                 <div className="quick-actions-grid">
                     <button 
                         className="btn-action btn-blue"
-                        onClick={() => navigate('/products')}
+                        onClick={() => navigate('/inventory')}
                     >
                         <Package size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} />
                         Gestionar Inventario

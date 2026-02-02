@@ -18,6 +18,7 @@ const Login = () => {
     const { login } = useAuth(); //Obtener el contexto de autenticacion
     const [email, setEmail] = useState(""); //Estado para el email del usuario
     const [password, setPassword] = useState(""); //Estado para la contraseña del usuario
+    const [rememberMe, setRememberMe] = useState(false); //ESTADO para "Mantener sesión"
     const [error, setError] = useState(""); //Estado para manejar errores de login
     const [loading, setLoading] = useState(false); //Estado para indicar si se esta procesando el login
 
@@ -43,7 +44,8 @@ const Login = () => {
             }
             console.log("LOGIN EXITOSO");
 
-            login(token, user);
+            //Pasamos el estado 'rememberMe' al contexto
+            login(token, user, rememberMe);
             
             //Redirección inteligente según rol (Opcional pero recomendado)
             if (user.role === 'VENDEDOR') {
@@ -66,8 +68,8 @@ const Login = () => {
     return (
         <div className="login-wrapper">
             <div className="login-container">
-                <h1>Bienvenido a Razors System Administration.</h1>
-                <h2>Iniciar Sesión.</h2>
+                <h1>Bienvenido a Razors System.</h1>
+                <h2>Panel de Administración.</h2>
                 <form onSubmit={handleLogin}>
                     <div>
                         <label htmlFor="email">Correo Electrónico:</label>
@@ -92,6 +94,18 @@ const Login = () => {
                             required
                             placeholder="••••••••"
                         />
+                    </div>
+
+                    {/* NUEVO: Checkbox "Mantener sesión" */}
+                    <div className="form-options">
+                        <label className="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
+                            <span>Mantener sesión iniciada</span>
+                        </label>
                     </div>
 
                     {/* Mensaje de error condicional */}

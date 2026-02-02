@@ -3,6 +3,7 @@
 //Modelo Eloquent para la tabla 'sales' en la base de datos.
 //Representa una venta realizada en el sistema de administración de ventas.
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -11,6 +12,7 @@ class Sale extends Model
     use HasFactory;
     protected $primaryKey = 'sale_id'; //Definir la llave primaria
     protected $fillable = [
+        'branch_id',
         'client_id', //clave foranea nula
         'user_id', //Clave foranea, referencia a usuario que realizó la venta
         'sale_date',
@@ -40,5 +42,11 @@ class Sale extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id'); //Una venta pertenece a un usuario
+    }
+    // --- AGREGAR ESTA FUNCIÓN PARA CORREGIR EL ERROR 500 DEL HISTORIAL ---
+    public function despath_guide()
+    {
+        // Usamos la ruta completa (string) para evitar errores de "Class not found"
+        return $this->hasOne('App\Models\DespathGuide', 'sale_id', 'sale_id');
     }
 }

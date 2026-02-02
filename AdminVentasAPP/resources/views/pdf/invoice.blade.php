@@ -9,18 +9,21 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background-color: #f2f2f2; border-bottom: 2px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
         td { border-bottom: 1px solid #ddd; padding: 8px; }
-        .total-section { margin-top: 20px; text-align: right; }
-        .total-label { font-weight: bold; font-size: 14px; margin-right: 10px; }
-        .total-amount { font-size: 16px; color: #2c3e50; font-weight: bold; }
-        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #777; border-top: 1px dashed #ccc; padding-top: 10px; }
-        .logo { max-height: 80px; margin-bottom: 5px; }
+        
+        /* Estilos para la sección de totales alineada a la derecha */
+        .total-section { margin-top: 20px; width: 100%; }
+        .total-table { width: 40%; float: right; border: none; }
+        .total-table td { border: none; padding: 4px; text-align: right; }
+        
+        .total-label { font-weight: bold; margin-right: 10px; }
+        .total-final { font-size: 14px; color: #2c3e50; font-weight: bold; border-top: 1px solid #333; }
+        
+        .footer { margin-top: 60px; text-align: center; font-size: 10px; color: #777; border-top: 1px dashed #ccc; padding-top: 10px; clear: both; }
         .company-name { font-size: 18px; font-weight: bold; margin: 5px 0; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="header">
-
-        
         <div class="company-name">{{ $company->name ?? 'EMPRESA' }}</div>
         <div><strong>RUC: {{ $company->ruc ?? '---' }}</strong></div>
         <div>{{ $company->address ?? 'Dirección Principal' }}</div>
@@ -31,8 +34,9 @@
         <table style="width: 100%; border: none; margin: 0;">
             <tr>
                 <td style="border: none; vertical-align: top; width: 60%;">
-                    {{-- BLINDAJE DE CLIENTE: Usamos optional() --}}
+                    {{-- BLINDAJE DE CLIENTE --}}
                     <strong>Cliente:</strong> {{ optional($sale->client)->name ?? 'Público General' }}<br>
+                    <strong>Doc:</strong> {{ optional($sale->client)->document_number ?? '---' }}<br>
                     <strong>Vendedor:</strong> {{ optional($sale->user)->name ?? 'Cajero' }} {{ optional($sale->user)->last_name ?? '' }}<br>
                     <strong>Método de Pago:</strong> {{ $sale->payment_method }}
                 </td>
@@ -67,9 +71,28 @@
         </tbody>
     </table>
 
+    {{-- CÁLCULOS FINANCIEROS (Matemática Inversa) --}}
+    @php
+        $totalPagar = $sale->total;
+        $baseImponible = $totalPagar / 1.18;
+        $igv = $totalPagar - $baseImponible;
+    @endphp
+
     <div class="total-section">
-        <span class="total-label">TOTAL A PAGAR:</span>
-        <span class="total-amount">S/. {{ number_format($sale->total, 2) }}</span>
+        <table class="total-table">
+            <tr>
+                <td class="total-label">OP. GRAVADA:</td>
+                <td>S/. {{ number_format($baseImponible, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="total-label">I.G.V. (18%):</td>
+                <td>S/. {{ number_format($igv, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="total-label total-final">TOTAL A PAGAR:</td>
+                <td class="total-final">S/. {{ number_format($totalPagar, 2) }}</td>
+            </tr>
+        </table>
     </div>
 
     <div class="footer">

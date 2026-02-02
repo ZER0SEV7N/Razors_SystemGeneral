@@ -26,8 +26,10 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
+        'branch_id',
         'role',
         'avatar',
+        'is_active'
     ];
 
     /**
@@ -56,6 +58,11 @@ class User extends Authenticatable
     public function products()
     {
         return $this->hasMany(Product::class, 'user_id', 'user_id');
+    }
+    //Relacion con la sucursal a la que pertenece el usuario
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
     }
 
     //--Evento para eliminar el avatar del usuario al ser eliminado--

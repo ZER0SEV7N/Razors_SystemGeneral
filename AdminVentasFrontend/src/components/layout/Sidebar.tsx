@@ -16,9 +16,10 @@ const Sidebar = () => {
 
     //Estado para almacenar la informacion del usuario
     if (!user) return <div className="sidebar">Cargando...</div>;
-
     //Obtener el rol del usuario
-    const role = user.role; // ADMIN, GERENTE, VENDEDOR
+    const role = user.role; // OWNER, ADMIN, GERENTE, VENDEDOR
+    const isOwner = role === 'OWNER';
+    const isBranchAdmin = role === 'ADMIN' || role === 'GERENTE';
 
     return (
         <aside className="sidebar">
@@ -30,45 +31,50 @@ const Sidebar = () => {
                 />
                 <h4>{user.name} {user.last_name}</h4>
                 <small>{user.email}</small> <br/>
-                <small style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
+                <span className="role-badge">
                     {role} {user.branch ? `| ${user.branch.name}` : ''}
-                </small>
+                </span>
             </div>
 
             {/* Menú de Navegación (CSS: .sidebar-menu) */}
             <nav className="sidebar-menu">
-                {/* --- VENTAS (Todos) --- */}
-                <NavLink to="/sales">Punto de Venta</NavLink>
-                <NavLink to="/history">Historial Ventas</NavLink>
-                <NavLink to="/clients">Clientes</NavLink>
+                {/* --- MÓDULO VENTAS (Todos) --- */}
+                <div className="menu-section">VENTAS</div>
+                <NavLink to="/sales">🛒 Punto de Venta</NavLink>
+                <NavLink to="/history">📜 Historial</NavLink>
+                <NavLink to="/clients">👥 Clientes</NavLink>
 
-                {/* --- GERENCIA (Admin y Gerente) --- */}
-                {(role === 'ADMIN' || role === 'GERENTE') && (
+                {/* --- MÓDULO GESTIÓN (Owner y Admins de Sede) --- */}
+                {(isOwner || isBranchAdmin) && (
                     <>
-                        <div style={{ marginTop: '10px', marginBottom: '5px', paddingLeft: '15px', fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>
-                            Gestión
-                        </div>
-                        <NavLink to="/dashboard">Dashboard</NavLink>
-                        <NavLink to="/products">Inventario</NavLink>
-                        <NavLink to="/categories">Categorías</NavLink>
+                        <div className="menu-section">GESTIÓN</div>
+                        <NavLink to="/dashboard">📊 Dashboard</NavLink>
+                        
+                        {/* El texto cambia según el rol */}
+                        <NavLink to="/inventory">
+                            {isOwner ? "📦 Inventario Global" : "📦 Inventario Local"}
+                        </NavLink>
+                        
+                        <NavLink to="/categories">🗂️ Categorías</NavLink>
                     </>
                 )}
 
-                {/* --- ADMINISTRACIÓN (Solo Admin) --- */}
-                {role === 'ADMIN' && (
+                {/* --- MÓDULO ADMINISTRACIÓN (Exclusivo OWNER) --- */}
+                {isOwner && (
                     <>
-                        <div style={{ marginTop: '10px', marginBottom: '5px', paddingLeft: '15px', fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>
-                            Admin
-                        </div>
-                        <NavLink to="/users">Usuarios</NavLink>
-                        <NavLink to="/settings">Configuración</NavLink>
+                        <div className="menu-section">ADMINISTRACIÓN</div>
+                        <NavLink to="/users">👔 Usuarios</NavLink>
+                        <NavLink to="/branches">🏢 Sucursales</NavLink>
+                        <NavLink to="/settings">⚙️ Configuración</NavLink>
                     </>
                 )}
 
                 {/* Botón de Logout */}
-                <button onClick={logout}>
-                    Cerrar Sesión
-                </button>
+                <div className="sidebar-footer">
+                    <button onClick={logout} className="btn-logout">
+                        🚪 Cerrar Sesión
+                    </button>
+                </div>
             </nav>
         </aside>
     );

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('password'); #contraseña del usuario
             $table->string('phone')->nullable(); #teléfono del usuario (permite nulos)
             $table->string('role')->default('VENDEDOR'); #rol del usuario con valor por defecto 'VENDEDOR'
+            $table->boolean('is_active')->default(true); // Asegúrate que diga default(true) o 1
             $table->timestamps();
         });
     }

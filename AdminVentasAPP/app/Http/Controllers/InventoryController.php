@@ -14,55 +14,116 @@ class InventoryController extends Controller
     //Funcion para Mover stock entre sucursales
     public function transferStock(Request $request)
     {
-        //1. Validacion de datos
+        //Validación de datos
         $request->validate([
             'product_id' => 'required|exists:products,product_id',
-            'branch_id' => 'required|exists:branches,branch_id',
-            'quantity' => 'required|integer|min:1'
+            'branch_id'  => 'required|exists:branches,branch_id', //Sucursal destino
+            'quantity'   => 'required|integer|min:1'
         ]);
 
-        return DB::transaction(function () use ($request) {
-            $product = Product::lockForUpdate()->find($request->product_id);
+        $productId = $request->product_id;
+        $destBranchId = $request->branch_id;
+        $qty = $request->quantity;
 
-            //1. Validar que haya suficiente en el Global
-            if ($product->stock < $request->quantity) {
-                return response()->json(['message' => 'Stock Global insuficiente'], 400);
-            }
+        //Transacción para asegurar integridad
+        try {
+            return DB::transaction(function () use ($productId, $destBranchId, $qty) {
+                
+                //Identificar el Almacén Central (Origen)
+                $centralId = $this->getCentralBranchId();
 
-            //2. Restar del Global
-            $product->decrement('stock', $request->quantity);
+                //2. Validar que exista la Central y que no sea la misma sucursal destino
+                if (!$centralId) {
+                    return response()->json(['message' => 'Error: No se encontró el Almacén Central.'], 500);
+                }
 
-            //3. Sumar a la Sucursal (Tabla Pivote)
-            //Usamos updateOrInsert para crear el registro si es la primera vez que llega este producto a esa sede
-            $exists = DB::table('branch_product')
-                        ->where('branch_id', $request->branch_id)
-                        ->where('product_id', $request->product_id)
-                        ->exists();
-            //Actualizar o insertar el stock en la sucursal
-            if ($exists) {
+                //Evitar transferencias a la misma sucursal
+                if ($centralId == $destBranchId) {
+                    return response()->json(['message' => 'No puedes transferir a la misma sucursal.'], 400);
+                }
+
+                //Verificar Stock disponible en Tabla Pivote
+                $sourceStock = DB::table('branch_product')
+                    ->where('product_id', $productId)
+                    ->where('branch_id', $centralId)
+                    ->value('stock');
+
+                //Si no hay stock suficiente en la sucurlal origen
+                if (!$sourceStock || $sourceStock < $qty) {
+                    return response()->json([
+                        'message' => "Stock insuficiente en Almacén Central. Disponible: " . ($sourceStock ?? 0)
+                    ], 400);
+                }
+
+                //Restar el stock de la Central
                 DB::table('branch_product')
-                    ->where('branch_id', $request->branch_id)
-                    ->where('product_id', $request->product_id)
-                    ->increment('stock', $request->quantity);
-            //Agregar nuevo registro en la tabla pivote
-            } else {
-                DB::table('branch_product')->insert([
-                    'branch_id' => $request->branch_id,
-                    'product_id' => $request->product_id,
-                    'stock' => $request->quantity,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-            }
-            //Respuesta exitosa
-            return response()->json(['message' => 'Stock transferido a la sucursal correctamente']);
-        });
+                    ->where('product_id', $productId)
+                    ->where('branch_id', $centralId)
+                    ->decrement('stock', $qty);
+
+                //Enviar a la Sucursal Destino
+                //Verificamos si el producto ya existe en el destino
+                $exists = DB::table('branch_product')
+                    ->where('product_id', $productId)
+                    ->where('branch_id', $destBranchId)
+                    ->exists();
+
+                //Si ya existe, actualizamos el stock
+                if ($exists) {
+                    DB::table('branch_product')
+                        ->where('product_id', $productId)
+                        ->where('branch_id', $destBranchId)
+                        ->increment('stock', $qty);
+                } else {
+                    //Si no existe, creamos el registro
+                    DB::table('branch_product')->insert([
+                        'product_id' => $productId,
+                        'branch_id'  => $destBranchId,
+                        'stock'      => $qty,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                //Retornar éxito
+                return response()->json(['message' => 'Transferencia realizada con éxito']);
+            });
+        //En caso de error, retornar mensaje
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al transferir: ' . $e->getMessage()], 500);
+        }
     }
     
-    //Ver stock de una sucursal específica
+    //Metodo para ver stock de una sucursal específica
     public function branchStock($branch_id)
     {
-        $branch = Branch::with('products')->findOrFail($branch_id);
-        return response()->json($branch->products);
+        //Validar que la sucursal exista
+        $branch = Branch::findOrFail($branch_id);
+        
+        //Obtener productos con stock en esa sucursal
+        $products = $branch->products()
+                           ->where('is_active', true)
+                           ->with('category')
+                           ->withPivot('stock')
+                           ->get();
+
+        //Retornar los productos con su stock
+        return response()->json($products);
+    }
+
+    //Metodo privado para obtener la ID de la Sucursal Central
+    private function getCentralBranchId()
+    {
+        //Primero, intentar obtener la sucursal marcada como principal
+        $central = DB::table('branches')->where('is_main', true)->first();
+        if ($central) return $central->branch_id;
+
+        //Segundo, intentar obtener una sucursal llamada "Central"
+        $centralByName = DB::table('branches')->where('name', 'like', '%Central%')->first();
+        if ($centralByName) return $centralByName->branch_id;
+
+        // Tercero, intentar obtener la primera que encuentre (Fallback)
+        $first = DB::table('branches')->first();
+        return $first ? $first->branch_id : null;
     }
 }

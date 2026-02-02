@@ -9,23 +9,36 @@ const api = axios.create({
         'Accept': 'application/json',
     }
 });
-//Agregar un interceptor para incluir el token de autenticación en cada solicitud
+// INTERCEPTOR DE SOLICITUD (El cambio clave está aquí)
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token"); //Obtener el token de autenticación del almacenamiento local
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`; //Agregar el token al encabezado de autorización si existe
+    // 1. Buscamos el token en localStorage (Persistente)
+    let token = localStorage.getItem("token");
+
+    // 2. Si no está, lo buscamos en sessionStorage (Temporal)
+    if (!token) {
+        token = sessionStorage.getItem("token");
     }
-    return config; //Devolver la configuración modificada
+
+    // 3. Si encontramos token en alguno de los dos, lo inyectamos
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
 });
-//Agregar un interceptor para manejar respuestas con error de autenticación
+
+// INTERCEPTOR DE RESPUESTA (Manejo de errores 401)
 api.interceptors.response.use( 
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // SOLUCIÓN: Verificamos si NO estamos ya en el login antes de redirigir.
-            // Si ya estamos en /login, dejamos que el componente Login maneje el error (muestre el mensaje).
+            // Evitamos bucle infinito si ya estamos en login
             if (window.location.pathname !== "/login") {
+                // Limpiamos AMBOS almacenamientos
                 localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                sessionStorage.clear();
+                
                 window.location.href = "/login";
             }
         }
