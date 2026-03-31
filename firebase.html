@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+  </head>
+  <body>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+      import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDrJXY1IdfSYPTBQa8uffHh_7kyqBW9tiw",
+        authDomain: "daniel-onpe.firebaseapp.com",
+        projectId: "daniel-onpe",
+        storageBucket: "daniel-onpe.firebasestorage.app",
+        messagingSenderId: "572748032570",
+        appId: "1:572748032570:web:72fd6769ba14a341bd6303"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const baseUrl = 'http://localhost/onpe_sweb_php'; 
+
+      const setParticipacionNacional = async () => {
+        try {
+          const response = await fetch(`${baseUrl}/participacion/Nacional`);
+          const result = await response.json();
+          
+          if (result.success) {
+            result.data.forEach(registro => {
+              addDoc(collection(db, 'participacion_nacional'), registro);
+            });
+            console.log("Participación Nacional cargada exitosamente.");
+          }
+        } catch (error) {
+          console.error("Error al cargar Participación Nacional:", error);
+        }
+      }
+
+      const setDepartamentosPeru = async () => {
+        try {
+          const response = await fetch(`${baseUrl}/actas/ubigeo/Peru`);
+          const result = await response.json();
+          
+          if (result.success) {
+            result.data.forEach(async departamento => {
+
+              addDoc(collection(db, 'departamentos_peru'), departamento);
+            });
+            console.log("Departamentos de Perú cargados exitosamente.");
+          }
+        } catch (error) {
+          console.error("Error al cargar Departamentos:", error);
+        }
+      }
+
+      const setActasUbigeo = async () => {
+        try {
+          // Empezamos por los departamentos de Perú
+          const resDep = await fetch(`${baseUrl}/actas/ubigeo/Peru`);
+          const jsonDep = await resDep.json();
+          
+          if (!jsonDep.success) return;
+
+          for (const departamento of jsonDep.data) {
+            console.log(`Guardando Departamento: ${departamento.DPD}`);
+            await addDoc(collection(db, 'ubigeo_departamentos'), departamento);
+
+            // Buscar Provincias de este Departamento
+            const resProv = await fetch(`${baseUrl}/actas/ubigeo/Peru/${departamento.DPD}`);
+            const jsonProv = await resProv.json();
+
+            if (jsonProv.success) {
+              for (const provincia of jsonProv.data) {
+                // Añadimos una referencia al departamento padre para no perder el rastro
+                provincia.departamento_padre = departamento.DPD;
+                await addDoc(collection(db, 'ubigeo_provincias'), provincia);
+
+                // Buscar Distritos de esta Provincia
+                const resDist = await fetch(`${baseUrl}/actas/ubigeo/Peru/${departamento.DPD}/${provincia.DPD}`);
+                const jsonDist = await resDist.json();
+
+                if (jsonDist.success) {
+                  for (const distrito of jsonDist.data) {
+                    distrito.provincia_padre = provincia.DPD;
+                    distrito.departamento_padre = departamento.DPD;
+                    await addDoc(collection(db, 'ubigeo_distritos'), distrito);
+                  }
+                }
+              }
+            }
+          }
+          console.log("Carga de Ubigeo (Perú) finalizada.");
+        } catch (error) {
+          console.error("Error en setActasUbigeo:", error);
+        }
+      };
+
+      setParticipacionNacional();
+      setDepartamentosPeru();
+      setActasUbigeo();
+
+    </script>
+  </body>
+</html>
